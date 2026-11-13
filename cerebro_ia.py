@@ -103,7 +103,7 @@ def ler_dna_criador():
         with open("perfil_cerebro.txt", "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
-        return "Projeto criado por Luca Legal."
+        return "Projeto criado por Luca de Brito Ferreira."
 
 def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     mensagens_formatadas = [
@@ -136,7 +136,7 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
                 messages=mensagens_formatadas,
                 temperature=temperatura,
             )
-            return resposta.choices.message.content
+            return resposta.choices[0].message.content
         except Exception:
             continue
 
@@ -170,7 +170,7 @@ with st.sidebar:
                 st.rerun()
 
     st.divider()
-    st.caption("Status: 🟢 Online • Criada por Luca Legal")
+    st.caption("Status: 🟢 Online • Criado por Luca de Brito Ferreira")
 
 # 5. Banner Principal
 st.markdown("""
