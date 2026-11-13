@@ -1,4 +1,5 @@
 import os
+import uuid
 from groq import Groq
 import streamlit as st
 import banco_memoria
@@ -19,13 +20,45 @@ client = Groq(api_key=CHAVE_API)
 # SENHA DO CRIADOR:
 SENHA_CRIADOR = "947298688"
 
-# 2. CSS Personalizado com visual tecnológico
+# 2. Inicializa o gerenciador de múltiplas conversas (igual ChatGPT/Gemini)
+MENSAGEM_INICIAL = "Olá! 🤖 Eu sou a **L.U.C.A. AI** (*Lógica Unificada de Conhecimento e Ação*). Fui feita para te ajudar com **qualquer coisa do dia a dia** — desde tirar dúvidas de estudos, escrever mensagens, organizar ideias e aprender coisas novas até bater um papo sobre qualquer assunto. O que você precisa resolver hoje? ⚡"
+
+if "conversas" not in st.session_state:
+    id_inicial = str(uuid.uuid4())
+    st.session_state.conversas = {
+        id_inicial: {
+            "titulo": "Nova conversa",
+            "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]
+        }
+    }
+    st.session_state.conversa_atual = id_inicial
+
+def criar_nova_conversa():
+    novo_id = str(uuid.uuid4())
+    st.session_state.conversas[novo_id] = {
+        "titulo": "Nova conversa",
+        "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]
+    }
+    st.session_state.conversa_atual = novo_id
+
+def excluir_conversa(id_conv):
+    if len(st.session_state.conversas) > 1:
+        del st.session_state.conversas[id_conv]
+        if st.session_state.conversa_atual == id_conv:
+            st.session_state.conversa_atual = list(st.session_state.conversas.keys())[-1]
+    else:
+        # Se for a única conversa, apenas limpa ela
+        st.session_state.conversas[id_conv] = {
+            "titulo": "Nova conversa",
+            "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]
+        }
+
+# 3. CSS Personalizado com visual tecnológico
 st.markdown("""
 <style>
-    /* Cabeçalho estilizado estilo Tech/AI */
     .hero-banner {
         background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 55%, #0284C7 100%);
-        padding: 2rem;
+        padding: 1.8rem;
         border-radius: 16px;
         color: white;
         margin-bottom: 1.5rem;
@@ -34,23 +67,21 @@ st.markdown("""
     }
     .hero-banner h1 {
         margin: 0;
-        font-size: 2rem;
+        font-size: 1.9rem;
         font-weight: 800;
         letter-spacing: 0.5px;
         line-height: 1.3;
     }
     .hero-banner .sigla-lado {
-        font-size: 1.15rem;
+        font-size: 1.1rem;
         color: #38BDF8;
         font-weight: 600;
-        letter-spacing: 0.5px;
     }
     .hero-banner p {
-        margin: 0.8rem 0 0 0;
-        font-size: 1.05rem;
+        margin: 0.6rem 0 0 0;
+        font-size: 1rem;
         opacity: 0.92;
     }
-    /* Estilo das abas */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
     }
@@ -59,7 +90,6 @@ st.markdown("""
         padding: 10px 20px;
         font-weight: 600;
     }
-    /* Mensagens do chat com bordas suaves */
     [data-testid="stChatMessage"] {
         border-radius: 12px;
         padding: 1rem;
@@ -74,7 +104,7 @@ def ler_dna_criador():
         with open("perfil_cerebro.txt", "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
-        return "Canal Luca Legal — Defesa pessoal, cultura pop e humor."
+        return "Projeto criado por Luca Legal."
 
 def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     mensagens_formatadas = [
@@ -113,77 +143,94 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
 
     return "⚠️ Núcleo sobrecarregado no momento. Aguarde alguns segundos e tente novamente!"
 
-# 3. Barra Lateral (Sidebar)
+# 4. Barra Lateral (Sidebar) com Histórico de Conversas
 with st.sidebar:
     st.markdown("## 🤖 L.U.C.A. AI")
     st.caption("Lógica Unificada de Conhecimento e Ação")
-    st.info("Olá! Eu sou a **L.U.C.A. AI** (*Lógica Unificada de Conhecimento e Ação*). Fui projetada para ajudar com **defesa pessoal**, **cultura pop**, novidades do canal e responder **qualquer pergunta do seu dia a dia**.")
     
-    st.markdown("### ⚡ Comandos Sugeridos:")
-    st.markdown("""
-    - 🛡️ *Como escapar de um agarre no pulso?*
-    - 🎬 *O John Wick sobreviveria na vida real?*
-    - 💻 *Me ajude a programar ou estudar.*
-    - 🧠 *Me conte uma curiosidade científica!*
-    """)
-    st.divider()
-    st.caption("Status: 🟢 Online • Comunidade Luca Legal")
+    # Botão grande de Nova Conversa
+    if st.button("➕ Nova Conversa", use_container_width=True, type="primary"):
+        criar_nova_conversa()
+        st.rerun()
 
-# 4. Banner Principal com a sigla ao lado do nome
+    st.markdown("### 💬 Suas Conversas")
+    
+    # Lista todas as conversas da mais recente para a mais antiga
+    for id_conv in reversed(list(st.session_state.conversas.keys())):
+        dados_conv = st.session_state.conversas[id_conv]
+        col_titulo, col_del = st.columns([0.82, 0.18])
+        
+        eh_atual = (id_conv == st.session_state.conversa_atual)
+        icone_chat = "🔵" if eh_atual else "💬"
+        
+        with col_titulo:
+            if st.button(f"{icone_chat} {dados_conv['titulo']}", key=f"btn_{id_conv}", use_container_width=True):
+                st.session_state.conversa_atual = id_conv
+                st.rerun()
+        with col_del:
+            if st.button("🗑️", key=f"del_{id_conv}", help="Apagar conversa"):
+                excluir_conversa(id_conv)
+                st.rerun()
+
+    st.divider()
+    st.caption("Status: 🟢 Online • Criada por Luca Legal")
+
+# 5. Banner Principal
 st.markdown("""
 <div class="hero-banner">
     <h1>🤖 L.U.C.A. AI <span class="sigla-lado">— Lógica Unificada de Conhecimento e Ação</span></h1>
-    <p>Inteligência Artificial oficial da comunidade Luca Legal — pronta para falar sobre defesa pessoal, cultura pop e qualquer assunto que você imaginar.</p>
+    <p>Sua assistente inteligente para ajudar com qualquer coisa do dia a dia — estudos, trabalho, ideias, dúvidas gerais e muito mais!</p>
 </div>
 """, unsafe_allow_html=True)
 
 aba_publica, aba_criador, aba_memoria = st.tabs([
-    "💬 Terminal Aberto (Público)", 
+    "💬 Chat Aberto (Público)", 
     "🎬 Núcleo do Criador (Restrito)", 
     "💾 Banco de Dados (Restrito)"
 ])
 
-# --- ABA 1: PÚBLICA (Conversa sobre TUDO, com foco no canal) ---
+# --- ABA 1: PÚBLICA (Com múltiplas conversas) ---
 with aba_publica:
-    if "hist_publico" not in st.session_state:
-        st.session_state.hist_publico = [
-            {"role": "assistant", "content": "Sistemas online! 🤖 Fala, pessoal! Eu sou a **L.U.C.A. AI** (*Lógica Unificada de Conhecimento e Ação*), a inteligência artificial oficial da comunidade **Luca Legal**. Posso te ajudar com análises de filmes e heróis, fundamentos de defesa pessoal, novidades do canal ou conversar sobre **qualquer outro assunto** (estudos, tecnologia, jogos, curiosidades). Como posso ajudar hoje? ⚡"}
-        ]
-
-    for msg in st.session_state.hist_publico:
+    conv_ativa = st.session_state.conversas[st.session_state.conversa_atual]
+    
+    for msg in conv_ativa["mensagens"]:
         avatar = "🤖" if msg["role"] == "assistant" else "👤"
         with st.chat_message(msg["role"], avatar=avatar):
             st.markdown(msg["content"])
 
-    if prompt_pub := st.chat_input("Digite sua mensagem para a L.U.C.A. AI...", key="in_pub"):
-        st.session_state.hist_publico.append({"role": "user", "content": prompt_pub})
+    if prompt_pub := st.chat_input("Pergunte ou peça ajuda com qualquer coisa...", key="in_pub"):
+        # Se for a primeira pergunta do usuário nesta conversa, define o título automaticamente
+        if conv_ativa["titulo"] == "Nova conversa":
+            titulo_resumido = prompt_pub[:28] + ("..." if len(prompt_pub) > 28 else "")
+            conv_ativa["titulo"] = titulo_resumido
+
+        conv_ativa["mensagens"].append({"role": "user", "content": prompt_pub})
         with st.chat_message("user", avatar="👤"):
             st.markdown(prompt_pub)
 
         dna = ler_dna_criador()
         memorias = banco_memoria.buscar_todas_notas()
         instrucao = f"""
-        Você é a 'L.U.C.A. AI' (Lógica Unificada de Conhecimento e Ação), a Inteligência Artificial Oficial da comunidade e canal 'Luca Legal'.
-        Você está conversando com um visitante, inscrito ou cliente no site oficial.
+        Você é a 'L.U.C.A. AI' (Lógica Unificada de Conhecimento e Ação), uma Inteligência Artificial geral criada para ajudar as pessoas com qualquer tarefa ou dúvida do dia a dia.
 
-        CONHECIMENTO SOBRE O CANAL E PRODUTOS:
+        INFORMAÇÕES DE CONTEXTO E DO CRIADOR (Use apenas se o usuário perguntar sobre o canal Luca Legal ou produtos):
         {dna}
 
         ATUALIZAÇÕES E REGRAS SALVAS:
         {memorias}
 
-        DIRETRIZES DE IDENTIDADE E COMPORTAMENTO:
-        1. NOME E POSTURA: Assuma a identidade da L.U.C.A. AI — uma inteligência artificial moderna, ágil, inteligente e bem-humorada (no estilo leve e direto do canal Luca Legal, adequado para todas as idades).
-        2. VERSATILIDADE TOTAL: Converse sobre QUALQUER assunto que o usuário pedir (estudos, programação, receitas, jogos, ciência, conselhos, curiosidades, etc.) com clareza e profundidade.
-        3. ESPECIALIDADE PRINCIPAL: Seus temas centrais são Defesa Pessoal, Cultura Pop (filmes, séries, super-heróis) e os conteúdos/produtos do canal Luca Legal. Conecte com esses temas sempre que fizer sentido natural.
-        4. PÚBLICO-ALVO: NUNCA trate o usuário como dono do canal. Proibido dizer "sua IA", "seu canal" ou "seus vídeos". Fale como a IA oficial da comunidade atendendo um visitante.
-        5. ENGAJAMENTO: Quando falar sobre vídeos ou produtos do canal, convide a pessoa a se inscrever e comentar no YouTube do Luca Legal.
+        DIRETRIZES DE COMPORTAMENTO:
+        1. ASSISTENTE UNIVERSAL DO DIA A DIA: Seu objetivo principal é ajudar o usuário com absolutamente qualquer assunto — estudos, resumos, programação, receitas, dicas práticas, trabalho, conselhos, escrita, jogos ou curiosidades gerais.
+        2. SEM FOCO FIXO: Não force assuntos específicos se o usuário não perguntou sobre isso. Responda diretamente ao que a pessoa precisa.
+        3. IDENTIDADE PÚBLICA: NUNCA trate o usuário como dono do sistema. Proibido dizer "sua IA", "seu canal" ou "seus vídeos". Fale como uma assistente inteligente acessível a todos.
+        4. TOM DE VOZ: Seja clara, educada, ágil, prestativa e bem-humorada na medida certa (adequada para todas as idades).
         """
         with st.chat_message("assistant", avatar="🤖"):
-            with st.spinner("Processando resposta..."):
-                resp = gerar_resposta(prompt_pub, st.session_state.hist_publico[:-1], instrucao, 0.7)
+            with st.spinner("Pensando..."):
+                resp = gerar_resposta(prompt_pub, conv_ativa["mensagens"][:-1], instrucao, 0.7)
                 st.markdown(resp)
-        st.session_state.hist_publico.append({"role": "assistant", "content": resp})
+        conv_ativa["mensagens"].append({"role": "assistant", "content": resp})
+        st.rerun()
 
 # --- ABA 2: ESTÚDIO DO CRIADOR (Protegido por senha) ---
 with aba_criador:
@@ -207,25 +254,3 @@ with aba_criador:
             memorias = banco_memoria.buscar_todas_notas()
             instrucao = f"""
             Você é a L.U.C.A. AI operando em modo privado para o criador Luca Legal nos bastidores.
-            Ajude a criar títulos de alto CTR, ganchos de 15s, roteiros virais e estratégias de engajamento.
-            SEU DNA: {dna}
-            MEMÓRIAS SALVAS: {memorias}
-            """
-            with st.chat_message("assistant", avatar="🎬"):
-                with st.spinner("Calculando estratégia viral..."):
-                    resp = gerar_resposta(prompt_yt, st.session_state.hist_copiloto[:-1], instrucao, 0.8)
-                    st.markdown(resp)
-            st.session_state.hist_copiloto.append({"role": "assistant", "content": resp})
-    elif senha_digitada:
-        st.error("Acesso negado. Código incorreto.")
-
-# --- ABA 3: TREINAR IA (Protegido por senha) ---
-with aba_memoria:
-    senha_mem = st.text_input("🔑 Código de acesso para atualizar memória:", type="password", key="pwd_mem")
-    if senha_mem == SENHA_CRIADOR:
-        st.caption("Insira novos dados no núcleo da L.U.C.A. AI para ela responder aos inscritos.")
-        categoria = st.selectbox("Categoria", ["Vídeo Novo", "Produto/Link", "Curiosidade do Canal", "Regra de Resposta"])
-        nova_nota = st.text_area("O que a L.U.C.A. AI deve memorizar?", placeholder="Ex: Lançamos um vídeo novo analisando o John Wick! Recomende para fãs de ação.")
-        if st.button("Atualizar Núcleo", type="primary"):
-            if nova_nota.strip():
-                banco_memoria.salvar_nota(categoria, nova_nota)
