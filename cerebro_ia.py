@@ -8,7 +8,7 @@ st.set_page_config(page_title="Segundo Cérebro IA", page_icon="🧠", layout="w
 banco_memoria.iniciar_banco()
 
 # SUA CHAVE DA GROQ CONFIGURADA:
-CHAVE_API = st.secrets["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"]
+CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 def ler_dna_criador():
