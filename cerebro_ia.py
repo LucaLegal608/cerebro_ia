@@ -1,4 +1,5 @@
 import os
+import time
 import uuid
 from datetime import datetime, timezone, timedelta
 from groq import Groq
@@ -7,7 +8,7 @@ import banco_memoria
 
 # 1. Configuração da página e banco de memória
 st.set_page_config(
-    page_title="L.U.C.A. AI (BETA v1.0) — Lógica Unificada de Conhecimento e Ação",
+    page_title="L.U.C.A IA (BETA v1.0) — Lógica Unificada de Conhecimento e Ação",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -15,17 +16,17 @@ st.set_page_config(
 banco_memoria.iniciar_banco()
 
 # Puxa a chave do cofre secreto do Streamlit Cloud:
-CHAVE_API = st.secrets["GROQ_API_KEY"]
+CHAVE_API = st.secrets["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"]
 client = Groq(api_key=CHAVE_API)
 
 # SENHA DO CRIADOR E VERSÃO ATUAL:
 SENHA_CRIADOR = "947298688"
 VERSAO_IA = "BETA • v1.0"
 
-# Função para capturar data e hora exatas no fuso de Brasília (GMT-03:00)
+# Função para capturar data e hora exatas sincronizadas
 def obter_data_hora_atual():
-    fuso_brasilia = timezone(timedelta(hours=-3))
-    agora = datetime.now(fuso_brasilia)
+    fuso_local = timezone(timedelta(hours=-1))
+    agora = datetime.now(fuso_local)
     dias_semana = [
         "Segunda-feira", "Terça-feira", "Quarta-feira",
         "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"
@@ -34,7 +35,7 @@ def obter_data_hora_atual():
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dia_sem})")
 
 # 2. Inicializa o gerenciador de múltiplas conversas
-MENSAGEM_INICIAL = "Olá! 🤖 Eu sou a **L.U.C.A. AI** (*Lógica Unificada de Conhecimento e Ação* — **BETA v1.0**). Fui feita para te ajudar com **qualquer coisa do dia a dia** — desde tirar dúvidas de estudos, escrever mensagens, organizar ideias e aprender coisas novas até bater um papo sobre qualquer assunto. O que você precisa resolver hoje? ⚡"
+MENSAGEM_INICIAL = "Olá! 🤖 Eu sou a **L.U.C.A IA** (*Lógica Unificada de Conhecimento e Ação* — **BETA v1.0**). Fui feita para te ajudar com **qualquer coisa do dia a dia** — desde tirar dúvidas de estudos, escrever mensagens, organizar ideias e aprender coisas novas até bater um papo sobre qualquer assunto. O que você precisa resolver hoje? ⚡"
 
 if "conversas" not in st.session_state:
     id_inicial = str(uuid.uuid4())
@@ -135,7 +136,8 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     mensagens_formatadas = [
         {"role": "system", "content": instrucao_sistema}
     ]
-    for item in historico:
+    # Mantém as últimas 10 mensagens para economizar cota gratuita e evitar travamentos
+    for item in historico[-10:]:
         mensagens_formatadas.append(
             {"role": item["role"], "content": item["content"]}
         )
@@ -149,10 +151,10 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
         lista_modelos = client.models.list()
         for m in lista_modelos.data:
             nome = m.id
-            if not any(x in nome.lower() for x in ["whisper", "guard", "tts"]):
+            if not any(x in nome.lower() for x in ["whisper", "guard", "tts", "vision"]):
                 modelos_disponiveis.append(nome)
-    except Exception:
-        pass
+    except Exception as e:
+        return f"⚠️ Erro de conexão com a chave da API: verifique se sua chave no Secrets do Streamlit está ativa. ({e})"
 
     modelos_disponiveis.sort(key=lambda x: ("70b" not in x and "large" not in x, x))
 
@@ -163,17 +165,18 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
                 messages=mensagens_formatadas,
                 temperature=temperatura,
             )
-            return resposta.choices.message.content
+            return resposta.choices[0].message.content
         except Exception:
+            time.sleep(1.5)
             continue
 
-    return "⚠️ Núcleo sobrecarregado no momento. Aguarde alguns segundos e tente novamente!"
+    return "⚠️ Muitas mensagens enviadas ao mesmo tempo! Aguarde 10 segundos e tente novamente."
 
 # 4. Barra Lateral (Sidebar) com Histórico de Conversas e Rodapé
 data_hora_agora = obter_data_hora_atual()
 
 with st.sidebar:
-    st.markdown(f"## 🤖 L.U.C.A. AI `{VERSAO_IA}`")
+    st.markdown(f"## 🤖 L.U.C.A IA `{VERSAO_IA}`")
     st.caption("Lógica Unificada de Conhecimento e Ação")
     st.caption(f"🕒 {data_hora_agora}")
     
@@ -207,7 +210,7 @@ with st.sidebar:
 # 5. Banner Principal com selo BETA v1.0
 st.markdown(f"""
 <div class="hero-banner">
-    <h1>🤖 L.U.C.A. AI <span class="sigla-lado">— Lógica Unificada de Conhecimento e Ação</span> <span class="badge-beta">{VERSAO_IA}</span></h1>
+    <h1>🤖 L.U.C.A IA <span class="sigla-lado">— Lógica Unificada de Conhecimento e Ação</span> <span class="badge-beta">{VERSAO_IA}</span></h1>
     <p>Sua assistente inteligente para ajudar com qualquer coisa do dia a dia — estudos, trabalho, ideias, dúvidas gerais e muito mais!</p>
 </div>
 """, unsafe_allow_html=True)
@@ -237,7 +240,7 @@ with aba_publica:
         memorias = banco_memoria.buscar_todas_notas()
         
         instrucao_pub = (
-            f"Você é a 'L.U.C.A. AI' (Lógica Unificada de Conhecimento e Ação), atualmente na versão {VERSAO_IA} (em fase de desenvolvimento), criada por Luca de Brito Ferreira.\n"
+            f"Você é a 'L.U.C.A IA' (Lógica Unificada de Conhecimento e Ação), atualmente na versão {VERSAO_IA} (em fase de desenvolvimento), criada por Luca de Brito Ferreira.\n"
             "REGRA DE DATA E HORA: Cada mensagem do usuário vem acompanhada de '[Relógio do Sistema Agora: ...]'. Sempre que perguntarem a data, o dia da semana ou a hora atual, responda EXATAMENTE com os números informados nesse relógio do sistema!\n"
             f"INFORMAÇÕES DE CONTEXTO E DO CRIADOR (Use apenas se o usuário perguntar sobre o canal Luca Legal ou produtos): {dna}\n"
             f"ATUALIZAÇÕES E REGRAS SALVAS: {memorias}\n"
@@ -248,7 +251,3 @@ with aba_publica:
             "4. TOM DE VOZ: Seja clara, educada, ágil, prestativa e bem-humorada na medida certa (adequada para todas as idades)."
         )
         
-        resp = gerar_resposta(prompt_pub, conv_ativa["mensagens"][:-1], instrucao_pub, 0.7)
-        conv_ativa["mensagens"].append({"role": "assistant", "content": resp})
-        st.rerun()
-
