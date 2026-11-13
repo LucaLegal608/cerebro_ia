@@ -64,28 +64,31 @@ def ler_dna_criador():
 
 def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     tempo_exato = obter_data_hora_atual()
-    mensagens_formatadas = [{"role": "system", "content": instrucao_sistema}]
+    # Coloca o relógio na instrução interna (invisível) e não na mensagem do usuário
+    sistema_completo = f"{instrucao_sistema}\n\n[DADO INTERNO SILENCIOSO - DATA E HORA ATUAL EM BRASÍLIA: {tempo_exato}. NUNCA imprima esse colchete na resposta. Use essa informação apenas se o usuário perguntar que dia é hoje ou que horas são.]"
+    
+    mensagens_formatadas = [{"role": "system", "content": sistema_completo}]
     for item in historico[-10:]:
         mensagens_formatadas.append({"role": item["role"], "content": item["content"]})
-    mensagem_com_relogio = f"[Relógio do Sistema Agora: {tempo_exato}]\nMensagem do usuário: {mensagem}"
-    mensagens_formatadas.append({"role": "user", "content": mensagem_com_relogio})
+    mensagens_formatadas.append({"role": "user", "content": mensagem})
 
     modelos_disponiveis = []
     try:
         lista_modelos = client.models.list()
         for m in lista_modelos.data:
             nome = m.id
-            if not any(x in nome.lower() for x in ["whisper", "guard", "tts", "vision"]):
+            if not any(x in nome.lower() for x in ["whisper", "guard", "tts", "vision", "8b"]):
                 modelos_disponiveis.append(nome)
     except Exception as e:
         return f"⚠️ Erro de conexão com a chave da API: verifique sua chave no Secrets do Streamlit. ({e})"
 
-    modelos_disponiveis.sort(key=lambda x: ("70b" not in x and "large" not in x, x))
+    # Prioriza os modelos mais inteligentes (llama-3.3, 70b, 120b, qwen)
+    modelos_disponiveis.sort(key=lambda x: ("llama-3.3" not in x and "70b" not in x and "120b" not in x, x))
 
     for modelo in modelos_disponiveis:
         try:
             resposta = client.chat.completions.create(model=modelo, messages=mensagens_formatadas, temperature=temperatura)
-            return resposta.choices[0].message.content
+            return resposta.choices.message.content
         except Exception:
             time.sleep(1.5)
             continue
@@ -148,7 +151,7 @@ with aba_publica:
         conv_ativa["mensagens"].append({"role": "user", "content": prompt_pub})
         dna = ler_dna_criador()
         memorias = banco_memoria.buscar_todas_notas()
-        instrucao_pub = f"Você é a 'L.U.C.A IA' (Lógica Unificada de Conhecimento e Ação), versão {VERSAO_IA} (em fase de desenvolvimento), criada por Luca de Brito Ferreira. REGRA DE DATA E HORA: Cada mensagem vem acompanhada de '[Relógio do Sistema Agora: ...]'. Sempre que perguntarem a data, dia da semana ou hora atual, responda EXATAMENTE com os números informados nesse relógio! CONTEXTO DO CRIADOR (use apenas se perguntarem sobre o canal Luca Legal): {dna}. ATUALIZAÇÕES SALVAS: {memorias}. DIRETRIZES: 1) Ajude com absolutamente qualquer assunto do dia a dia (estudos, código, receitas, trabalho, curiosidades). 2) Não force assuntos específicos se não perguntarem. 3) Nunca trate o visitante como dono do sistema. 4) Seja clara, educada, ágil e bem-humorada (para todas as idades)."
+        instrucao_pub = f"Você é a 'L.U.C.A IA' (Lógica Unificada de Conhecimento e Ação), versão {VERSAO_IA} (em fase de desenvolvimento), criada por Luca de Brito Ferreira. IDIOMA OBRIGATÓRIO: Fale EXCLUSIVAMENTE em Português do Brasil natural, fluido e amigável (nunca use português de Portugal como 'oiça' ou 'estou a fazer'). CONTEXTO DO CRIADOR (use apenas se perguntarem sobre o canal Luca Legal): {dna}. ATUALIZAÇÕES SALVAS: {memorias}. DIRETRIZES: 1) Ajude com absolutamente qualquer assunto do dia a dia de forma leve, direta e inteligente. 2) Nunca trate o visitante como dono do sistema. 3) Não repita listas robóticas de temas na saudação — converse de forma humana e natural."
         
         resp = gerar_resposta(prompt_pub, conv_ativa["mensagens"][:-1], instrucao_pub, 0.7)
         conv_ativa["mensagens"].append({"role": "assistant", "content": resp})
@@ -170,12 +173,8 @@ with aba_criador:
             st.session_state.hist_copiloto.append({"role": "user", "content": prompt_yt})
             dna = ler_dna_criador()
             memorias = banco_memoria.buscar_todas_notas()
-            instrucao_yt = f"Você é a L.U.C.A IA ({VERSAO_IA}) operando em modo privado para o criador Luca Legal nos bastidores. Ajude a criar títulos de alto CTR, ganchos de 15s, roteiros virais e estratégias de engajamento. SEU DNA: {dna}. MEMÓRIAS SALVAS: {memorias}"
+            instrucao_yt = f"Você é a L.U.C.A IA ({VERSAO_IA}) operando em modo privado para o criador Luca Legal nos bastidores em Português do Brasil. Ajude a criar títulos de alto CTR, ganchos de 15s, roteiros virais e estratégias de engajamento. SEU DNA: {dna}. MEMÓRIAS SALVAS: {memorias}"
             resp = gerar_resposta(prompt_yt, st.session_state.hist_copiloto[:-1], instrucao_yt, 0.8)
             st.session_state.hist_copiloto.append({"role": "assistant", "content": resp})
             st.rerun()
     elif senha_digitada:
-        st.error("Acesso negado. Código incorreto.")
-
-with aba_memoria:
-    senha_mem = st.text_input("🔑 Código de acesso para atualizar memória:", type="password", key="pwd_mem")
