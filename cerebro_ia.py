@@ -22,10 +22,10 @@ client = Groq(api_key=CHAVE_API)
 SENHA_CRIADOR = "947298688"
 VERSAO_IA = "BETA • v1.0"
 
-# Função ajustada (+2h) para bater exatamente com o seu relógio local
+# Função para capturar data e hora exatas no fuso de Brasília (GMT-03:00)
 def obter_data_hora_atual():
-    fuso_local = timezone(timedelta(hours=-1))
-    agora = datetime.now(fuso_local)
+    fuso_brasilia = timezone(timedelta(hours=-3))
+    agora = datetime.now(fuso_brasilia)
     dias_semana = [
         "Segunda-feira", "Terça-feira", "Quarta-feira",
         "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"
@@ -163,7 +163,7 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
                 messages=mensagens_formatadas,
                 temperature=temperatura,
             )
-            return resposta.choices[0].message.content
+            return resposta.choices.message.content
         except Exception:
             continue
 
@@ -233,9 +233,6 @@ with aba_publica:
             conv_ativa["titulo"] = titulo_resumido
 
         conv_ativa["mensagens"].append({"role": "user", "content": prompt_pub})
-        with st.chat_message("user", avatar="👤"):
-            st.markdown(prompt_pub)
-
         dna = ler_dna_criador()
         memorias = banco_memoria.buscar_todas_notas()
         
@@ -250,5 +247,8 @@ with aba_publica:
             "3. IDENTIDADE PÚBLICA: NUNCA trate o usuário como dono do sistema. Proibido dizer 'sua IA', 'seu canal' ou 'seus vídeos'. Fale como uma assistente inteligente acessível a todos.\n"
             "4. TOM DE VOZ: Seja clara, educada, ágil, prestativa e bem-humorada na medida certa (adequada para todas as idades)."
         )
-        with st.chat_message("assistant", avatar="🤖"):
-            with st.spinner("Pensando..."):
+        
+        resp = gerar_resposta(prompt_pub, conv_ativa["mensagens"][:-1], instrucao_pub, 0.7)
+        conv_ativa["mensagens"].append({"role": "assistant", "content": resp})
+        st.rerun()
+
