@@ -22,10 +22,10 @@ client = Groq(api_key=CHAVE_API)
 SENHA_CRIADOR = "947298688"
 VERSAO_IA = "BETA • v1.0"
 
-# Função para capturar data e hora exatas no fuso de Brasília (GMT-3)
+# Função ajustada (+2h) para bater exatamente com o seu relógio local
 def obter_data_hora_atual():
-    fuso_brasilia = timezone(timedelta(hours=-3))
-    agora = datetime.now(fuso_brasilia)
+    fuso_local = timezone(timedelta(hours=-1))
+    agora = datetime.now(fuso_local)
     dias_semana = [
         "Segunda-feira", "Terça-feira", "Quarta-feira",
         "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"
@@ -131,6 +131,8 @@ def ler_dna_criador():
         return "Projeto criado por Luca de Brito Ferreira."
 
 def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
+    tempo_exato = obter_data_hora_atual()
+    
     mensagens_formatadas = [
         {"role": "system", "content": instrucao_sistema}
     ]
@@ -138,8 +140,10 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
         mensagens_formatadas.append(
             {"role": item["role"], "content": item["content"]}
         )
+    # Injeta a data e hora exatas junto com a mensagem atual para a IA nunca errar
+    mensagem_com_relogio = f"[Relógio do Sistema Agora: {tempo_exato}]\nMensagem do usuário: {mensagem}"
     mensagens_formatadas.append(
-        {"role": "user", "content": mensagem}
+        {"role": "user", "content": mensagem_com_relogio}
     )
 
     modelos_disponiveis = []
@@ -161,7 +165,7 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
                 messages=mensagens_formatadas,
                 temperature=temperatura,
             )
-            return resposta.choices[0].message.content
+            return resposta.choices.message.content
         except Exception:
             continue
 
@@ -216,7 +220,7 @@ aba_publica, aba_criador, aba_memoria = st.tabs([
     "💾 Banco de Dados (Restrito)"
 ])
 
-# --- ABA 1: PÚBLICA (Com múltiplas conversas e relógio em tempo real) ---
+# --- ABA 1: PÚBLICA ---
 with aba_publica:
     conv_ativa = st.session_state.conversas[st.session_state.conversa_atual]
     
@@ -236,11 +240,10 @@ with aba_publica:
 
         dna = ler_dna_criador()
         memorias = banco_memoria.buscar_todas_notas()
-        tempo_real = obter_data_hora_atual()
         
         instrucao_pub = (
             f"Você é a 'L.U.C.A. AI' (Lógica Unificada de Conhecimento e Ação), atualmente na versão {VERSAO_IA} (em fase de desenvolvimento), criada por Luca de Brito Ferreira.\n"
-            f"DATA E HORA EXATA AGORA (Horário de Brasília): {tempo_real}. Sempre que o usuário perguntar que dia é hoje, a data atual ou que horas são, responda usando exatamente esses números!\n"
+            "REGRA DE DATA E HORA: Cada mensagem do usuário vem acompanhada de '[Relógio do Sistema Agora: ...]'. Sempre que perguntarem a data, o dia da semana ou a hora atual, responda EXATAMENTE com os números informados nesse relógio do sistema!\n"
             f"INFORMAÇÕES DE CONTEXTO E DO CRIADOR (Use apenas se o usuário perguntar sobre o canal Luca Legal ou produtos): {dna}\n"
             f"ATUALIZAÇÕES E REGRAS SALVAS: {memorias}\n"
             "DIRETRIZES DE COMPORTAMENTO:\n"
@@ -250,6 +253,3 @@ with aba_publica:
             "4. TOM DE VOZ: Seja clara, educada, ágil, prestativa e bem-humorada na medida certa (adequada para todas as idades)."
         )
         with st.chat_message("assistant", avatar="🤖"):
-            with st.spinner("Pensando..."):
-                resp = gerar_resposta(prompt_pub, conv_ativa["mensagens"][:-1], instrucao_pub, 0.7)
-                st.markdown(resp)
