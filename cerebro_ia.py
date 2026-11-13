@@ -20,7 +20,7 @@ client = Groq(api_key=CHAVE_API)
 # SENHA DO CRIADOR:
 SENHA_CRIADOR = "947298688"
 
-# 2. Inicializa o gerenciador de múltiplas conversas (igual ChatGPT/Gemini)
+# 2. Inicializa o gerenciador de múltiplas conversas
 MENSAGEM_INICIAL = "Olá! 🤖 Eu sou a **L.U.C.A. AI** (*Lógica Unificada de Conhecimento e Ação*). Fui feita para te ajudar com **qualquer coisa do dia a dia** — desde tirar dúvidas de estudos, escrever mensagens, organizar ideias e aprender coisas novas até bater um papo sobre qualquer assunto. O que você precisa resolver hoje? ⚡"
 
 if "conversas" not in st.session_state:
@@ -47,7 +47,6 @@ def excluir_conversa(id_conv):
         if st.session_state.conversa_atual == id_conv:
             st.session_state.conversa_atual = list(st.session_state.conversas.keys())[-1]
     else:
-        # Se for a única conversa, apenas limpa ela
         st.session_state.conversas[id_conv] = {
             "titulo": "Nova conversa",
             "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]
@@ -137,7 +136,7 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
                 messages=mensagens_formatadas,
                 temperature=temperatura,
             )
-            return resposta.choices[0].message.content
+            return resposta.choices.message.content
         except Exception:
             continue
 
@@ -148,14 +147,12 @@ with st.sidebar:
     st.markdown("## 🤖 L.U.C.A. AI")
     st.caption("Lógica Unificada de Conhecimento e Ação")
     
-    # Botão grande de Nova Conversa
     if st.button("➕ Nova Conversa", use_container_width=True, type="primary"):
         criar_nova_conversa()
         st.rerun()
 
     st.markdown("### 💬 Suas Conversas")
     
-    # Lista todas as conversas da mais recente para a mais antiga
     for id_conv in reversed(list(st.session_state.conversas.keys())):
         dados_conv = st.session_state.conversas[id_conv]
         col_titulo, col_del = st.columns([0.82, 0.18])
@@ -199,7 +196,6 @@ with aba_publica:
             st.markdown(msg["content"])
 
     if prompt_pub := st.chat_input("Pergunte ou peça ajuda com qualquer coisa...", key="in_pub"):
-        # Se for a primeira pergunta do usuário nesta conversa, define o título automaticamente
         if conv_ativa["titulo"] == "Nova conversa":
             titulo_resumido = prompt_pub[:28] + ("..." if len(prompt_pub) > 28 else "")
             conv_ativa["titulo"] = titulo_resumido
@@ -210,24 +206,19 @@ with aba_publica:
 
         dna = ler_dna_criador()
         memorias = banco_memoria.buscar_todas_notas()
-        instrucao = f"""
-        Você é a 'L.U.C.A. AI' (Lógica Unificada de Conhecimento e Ação), uma Inteligência Artificial geral criada para ajudar as pessoas com qualquer tarefa ou dúvida do dia a dia.
-
-        INFORMAÇÕES DE CONTEXTO E DO CRIADOR (Use apenas se o usuário perguntar sobre o canal Luca Legal ou produtos):
-        {dna}
-
-        ATUALIZAÇÕES E REGRAS SALVAS:
-        {memorias}
-
-        DIRETRIZES DE COMPORTAMENTO:
-        1. ASSISTENTE UNIVERSAL DO DIA A DIA: Seu objetivo principal é ajudar o usuário com absolutamente qualquer assunto — estudos, resumos, programação, receitas, dicas práticas, trabalho, conselhos, escrita, jogos ou curiosidades gerais.
-        2. SEM FOCO FIXO: Não force assuntos específicos se o usuário não perguntou sobre isso. Responda diretamente ao que a pessoa precisa.
-        3. IDENTIDADE PÚBLICA: NUNCA trate o usuário como dono do sistema. Proibido dizer "sua IA", "seu canal" ou "seus vídeos". Fale como uma assistente inteligente acessível a todos.
-        4. TOM DE VOZ: Seja clara, educada, ágil, prestativa e bem-humorada na medida certa (adequada para todas as idades).
-        """
+        instrucao_pub = (
+            "Você é a 'L.U.C.A. AI' (Lógica Unificada de Conhecimento e Ação), uma Inteligência Artificial geral criada para ajudar as pessoas com qualquer tarefa ou dúvida do dia a dia.\n"
+            f"INFORMAÇÕES DE CONTEXTO E DO CRIADOR (Use apenas se o usuário perguntar sobre o canal Luca Legal ou produtos): {dna}\n"
+            f"ATUALIZAÇÕES E REGRAS SALVAS: {memorias}\n"
+            "DIRETRIZES DE COMPORTAMENTO:\n"
+            "1. ASSISTENTE UNIVERSAL DO DIA A DIA: Seu objetivo principal é ajudar o usuário com absolutamente qualquer assunto — estudos, resumos, programação, receitas, dicas práticas, trabalho, conselhos, escrita, jogos ou curiosidades gerais.\n"
+            "2. SEM FOCO FIXO: Não force assuntos específicos se o usuário não perguntou sobre isso. Responda diretamente ao que a pessoa precisa.\n"
+            "3. IDENTIDADE PÚBLICA: NUNCA trate o usuário como dono do sistema. Proibido dizer 'sua IA', 'seu canal' ou 'seus vídeos'. Fale como uma assistente inteligente acessível a todos.\n"
+            "4. TOM DE VOZ: Seja clara, educada, ágil, prestativa e bem-humorada na medida certa (adequada para todas as idades)."
+        )
         with st.chat_message("assistant", avatar="🤖"):
             with st.spinner("Pensando..."):
-                resp = gerar_resposta(prompt_pub, conv_ativa["mensagens"][:-1], instrucao, 0.7)
+                resp = gerar_resposta(prompt_pub, conv_ativa["mensagens"][:-1], instrucao_pub, 0.7)
                 st.markdown(resp)
         conv_ativa["mensagens"].append({"role": "assistant", "content": resp})
         st.rerun()
@@ -252,5 +243,9 @@ with aba_criador:
 
             dna = ler_dna_criador()
             memorias = banco_memoria.buscar_todas_notas()
-            instrucao = f"""
-            Você é a L.U.C.A. AI operando em modo privado para o criador Luca Legal nos bastidores.
+            instrucao_yt = (
+                "Você é a L.U.C.A. AI operando em modo privado para o criador Luca Legal nos bastidores.\n"
+                "Ajude a criar títulos de alto CTR, ganchos de 15s, roteiros virais e estratégias de engajamento.\n"
+                f"SEU DNA: {dna}\n"
+                f"MEMÓRIAS SALVAS: {memorias}"
+            )
