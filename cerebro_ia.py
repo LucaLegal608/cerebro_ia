@@ -132,7 +132,6 @@ def ler_dna_criador():
 
 def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     tempo_exato = obter_data_hora_atual()
-    
     mensagens_formatadas = [
         {"role": "system", "content": instrucao_sistema}
     ]
@@ -140,7 +139,6 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
         mensagens_formatadas.append(
             {"role": item["role"], "content": item["content"]}
         )
-    # Injeta a data e hora exatas junto com a mensagem atual para a IA nunca errar
     mensagem_com_relogio = f"[Relógio do Sistema Agora: {tempo_exato}]\nMensagem do usuário: {mensagem}"
     mensagens_formatadas.append(
         {"role": "user", "content": mensagem_com_relogio}
@@ -165,7 +163,7 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
                 messages=mensagens_formatadas,
                 temperature=temperatura,
             )
-            return resposta.choices.message.content
+            return resposta.choices[0].message.content
         except Exception:
             continue
 
@@ -253,3 +251,4 @@ with aba_publica:
             "4. TOM DE VOZ: Seja clara, educada, ágil, prestativa e bem-humorada na medida certa (adequada para todas as idades)."
         )
         with st.chat_message("assistant", avatar="🤖"):
+            with st.spinner("Pensando..."):
