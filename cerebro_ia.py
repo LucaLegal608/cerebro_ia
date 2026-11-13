@@ -64,9 +64,7 @@ def ler_dna_criador():
 
 def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     tempo_exato = obter_data_hora_atual()
-    # Coloca o relógio na instrução interna (invisível) e não na mensagem do usuário
     sistema_completo = f"{instrucao_sistema}\n\n[DADO INTERNO SILENCIOSO - DATA E HORA ATUAL EM BRASÍLIA: {tempo_exato}. NUNCA imprima esse colchete na resposta. Use essa informação apenas se o usuário perguntar que dia é hoje ou que horas são.]"
-    
     mensagens_formatadas = [{"role": "system", "content": sistema_completo}]
     for item in historico[-10:]:
         mensagens_formatadas.append({"role": item["role"], "content": item["content"]})
@@ -82,7 +80,6 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     except Exception as e:
         return f"⚠️ Erro de conexão com a chave da API: verifique sua chave no Secrets do Streamlit. ({e})"
 
-    # Prioriza os modelos mais inteligentes (llama-3.3, 70b, 120b, qwen)
     modelos_disponiveis.sort(key=lambda x: ("llama-3.3" not in x and "70b" not in x and "120b" not in x, x))
 
     for modelo in modelos_disponiveis:
@@ -101,19 +98,16 @@ with st.sidebar:
     st.markdown(f"## 🤖 L.U.C.A IA `{VERSAO_IA}`")
     st.caption("Lógica Unificada de Conhecimento e Ação")
     st.caption(f"🕒 {data_hora_agora}")
-    
     if st.button("➕ Nova Conversa", use_container_width=True, type="primary"):
         criar_nova_conversa()
         st.rerun()
 
     st.markdown("### 💬 Suas Conversas")
-    
     for id_conv in reversed(list(st.session_state.conversas.keys())):
         dados_conv = st.session_state.conversas[id_conv]
         col_titulo, col_del = st.columns([0.82, 0.18])
         eh_atual = (id_conv == st.session_state.conversa_atual)
         icone_chat = "🔵" if eh_atual else "💬"
-        
         with col_titulo:
             if st.button(f"{icone_chat} {dados_conv['titulo']}", key=f"btn_{id_conv}", use_container_width=True):
                 st.session_state.conversa_atual = id_conv
@@ -147,28 +141,26 @@ with aba_publica:
     if prompt_pub := st.chat_input("Pergunte ou peça ajuda com qualquer coisa...", key="in_pub"):
         if conv_ativa["titulo"] == "Nova conversa":
             conv_ativa["titulo"] = prompt_pub[:28] + ("..." if len(prompt_pub) > 28 else "")
-
         conv_ativa["mensagens"].append({"role": "user", "content": prompt_pub})
         dna = ler_dna_criador()
         memorias = banco_memoria.buscar_todas_notas()
-        instrucao_pub = f"Você é a 'L.U.C.A IA' (Lógica Unificada de Conhecimento e Ação), versão {VERSAO_IA} (em fase de desenvolvimento), criada por Luca de Brito Ferreira. IDIOMA OBRIGATÓRIO: Fale EXCLUSIVAMENTE em Português do Brasil natural, fluido e amigável (nunca use português de Portugal como 'oiça' ou 'estou a fazer'). CONTEXTO DO CRIADOR (use apenas se perguntarem sobre o canal Luca Legal): {dna}. ATUALIZAÇÕES SALVAS: {memorias}. DIRETRIZES: 1) Ajude com absolutamente qualquer assunto do dia a dia de forma leve, direta e inteligente. 2) Nunca trate o visitante como dono do sistema. 3) Não repita listas robóticas de temas na saudação — converse de forma humana e natural."
-        
+        instrucao_pub = f"Você é a 'L.U.C.A IA' (Lógica Unificada de Conhecimento e Ação), versão {VERSAO_IA} (em fase de desenvolvimento), criada por Luca de Brito Ferreira. IDIOMA OBRIGATÓRIO: Fale EXCLUSIVAMENTE em Português do Brasil natural, fluido e amigável (nunca use português de Portugal como 'oiça'). CONTEXTO DO CRIADOR (use apenas se perguntarem sobre o canal Luca Legal): {dna}. ATUALIZAÇÕES SALVAS: {memorias}. DIRETRIZES: 1) Ajude com absolutamente qualquer assunto do dia a dia de forma leve, direta e inteligente. 2) Nunca trate o visitante como dono do sistema. 3) Converse de forma humana e natural."
         resp = gerar_resposta(prompt_pub, conv_ativa["mensagens"][:-1], instrucao_pub, 0.7)
         conv_ativa["mensagens"].append({"role": "assistant", "content": resp})
         st.rerun()
 
 with aba_criador:
-    senha_digitada = st.text_input("🔑 Código de acesso do criador:", type="password", key="pwd_est")
-    if senha_digitada == SENHA_CRIADOR:
-        st.success(f"Identidade confirmada, Luca! Modo estrategista de YouTube ativado ({VERSAO_IA}).")
+    senha_est = st.text_input("🔑 Código de acesso do criador:", type="password", key="pwd_est")
+    if senha_est != SENHA_CRIADOR and senha_est != "":
+        st.error("Acesso negado. Código incorreto.")
+    if senha_est == SENHA_CRIADOR:
+        st.success(f"Identidade confirmada, Luca! Modo estrategista ativado ({VERSAO_IA}).")
         if "hist_copiloto" not in st.session_state:
             st.session_state.hist_copiloto = []
-
         for msg in st.session_state.hist_copiloto:
             avatar = "🎬" if msg["role"] == "assistant" else "🦸‍♂️"
             with st.chat_message(msg["role"], avatar=avatar):
                 st.markdown(msg["content"])
-
         if prompt_yt := st.chat_input("Peça uma ideia de vídeo, título ou roteiro...", key="in_yt"):
             st.session_state.hist_copiloto.append({"role": "user", "content": prompt_yt})
             dna = ler_dna_criador()
@@ -177,4 +169,7 @@ with aba_criador:
             resp = gerar_resposta(prompt_yt, st.session_state.hist_copiloto[:-1], instrucao_yt, 0.8)
             st.session_state.hist_copiloto.append({"role": "assistant", "content": resp})
             st.rerun()
-    elif senha_digitada:
+
+with aba_memoria:
+    senha_mem = st.text_input("🔑 Código de acesso para atualizar memória:", type="password", key="pwd_mem")
+    if senha_mem != SENHA_CRIADOR and senha_mem != "":
