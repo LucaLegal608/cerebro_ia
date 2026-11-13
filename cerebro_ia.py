@@ -1,12 +1,13 @@
 import os
 import uuid
+from datetime import datetime, timezone, timedelta
 from groq import Groq
 import streamlit as st
 import banco_memoria
 
 # 1. Configuração da página e banco de memória
 st.set_page_config(
-    page_title="L.U.C.A. AI — Lógica Unificada de Conhecimento e Ação",
+    page_title="L.U.C.A. AI (BETA v1.0) — Lógica Unificada de Conhecimento e Ação",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -17,11 +18,23 @@ banco_memoria.iniciar_banco()
 CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
-# SENHA DO CRIADOR:
+# SENHA DO CRIADOR E VERSÃO ATUAL:
 SENHA_CRIADOR = "947298688"
+VERSAO_IA = "BETA • v1.0"
+
+# Função para capturar data e hora exatas no fuso de Brasília (GMT-3)
+def obter_data_hora_atual():
+    fuso_brasilia = timezone(timedelta(hours=-3))
+    agora = datetime.now(fuso_brasilia)
+    dias_semana = [
+        "Segunda-feira", "Terça-feira", "Quarta-feira",
+        "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"
+    ]
+    dia_sem = dias_semana[agora.weekday()]
+    return agora.strftime(f"%d/%m/%Y às %H:%M ({dia_sem})")
 
 # 2. Inicializa o gerenciador de múltiplas conversas
-MENSAGEM_INICIAL = "Olá! 🤖 Eu sou a **L.U.C.A. AI** (*Lógica Unificada de Conhecimento e Ação*). Fui feita para te ajudar com **qualquer coisa do dia a dia** — desde tirar dúvidas de estudos, escrever mensagens, organizar ideias e aprender coisas novas até bater um papo sobre qualquer assunto. O que você precisa resolver hoje? ⚡"
+MENSAGEM_INICIAL = "Olá! 🤖 Eu sou a **L.U.C.A. AI** (*Lógica Unificada de Conhecimento e Ação* — **BETA v1.0**). Fui feita para te ajudar com **qualquer coisa do dia a dia** — desde tirar dúvidas de estudos, escrever mensagens, organizar ideias e aprender coisas novas até bater um papo sobre qualquer assunto. O que você precisa resolver hoje? ⚡"
 
 if "conversas" not in st.session_state:
     id_inicial = str(uuid.uuid4())
@@ -75,6 +88,18 @@ st.markdown("""
         font-size: 1.1rem;
         color: #38BDF8;
         font-weight: 600;
+    }
+    .badge-beta {
+        background-color: rgba(56, 189, 248, 0.2);
+        border: 1px solid #38BDF8;
+        color: #E0F2FE;
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 999px;
+        vertical-align: middle;
+        margin-left: 8px;
+        letter-spacing: 0.8px;
     }
     .hero-banner p {
         margin: 0.6rem 0 0 0;
@@ -142,10 +167,13 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
 
     return "⚠️ Núcleo sobrecarregado no momento. Aguarde alguns segundos e tente novamente!"
 
-# 4. Barra Lateral (Sidebar) com Histórico de Conversas
+# 4. Barra Lateral (Sidebar) com Histórico de Conversas e Rodapé
+data_hora_agora = obter_data_hora_atual()
+
 with st.sidebar:
-    st.markdown("## 🤖 L.U.C.A. AI")
+    st.markdown(f"## 🤖 L.U.C.A. AI `{VERSAO_IA}`")
     st.caption("Lógica Unificada de Conhecimento e Ação")
+    st.caption(f"🕒 {data_hora_agora}")
     
     if st.button("➕ Nova Conversa", use_container_width=True, type="primary"):
         criar_nova_conversa()
@@ -170,12 +198,14 @@ with st.sidebar:
                 st.rerun()
 
     st.divider()
-    st.caption("Status: 🟢 Online • Criado por Luca de Brito Ferreira")
+    st.caption(f"Status: 🟢 Online • {VERSAO_IA}")
+    st.caption("Criado por Luca de Brito Ferreira")
+    st.caption("⚠️ Esta IA está em fase de desenvolvimento.")
 
-# 5. Banner Principal
-st.markdown("""
+# 5. Banner Principal com selo BETA v1.0
+st.markdown(f"""
 <div class="hero-banner">
-    <h1>🤖 L.U.C.A. AI <span class="sigla-lado">— Lógica Unificada de Conhecimento e Ação</span></h1>
+    <h1>🤖 L.U.C.A. AI <span class="sigla-lado">— Lógica Unificada de Conhecimento e Ação</span> <span class="badge-beta">{VERSAO_IA}</span></h1>
     <p>Sua assistente inteligente para ajudar com qualquer coisa do dia a dia — estudos, trabalho, ideias, dúvidas gerais e muito mais!</p>
 </div>
 """, unsafe_allow_html=True)
@@ -186,7 +216,7 @@ aba_publica, aba_criador, aba_memoria = st.tabs([
     "💾 Banco de Dados (Restrito)"
 ])
 
-# --- ABA 1: PÚBLICA (Com múltiplas conversas) ---
+# --- ABA 1: PÚBLICA (Com múltiplas conversas e relógio em tempo real) ---
 with aba_publica:
     conv_ativa = st.session_state.conversas[st.session_state.conversa_atual]
     
@@ -206,8 +236,11 @@ with aba_publica:
 
         dna = ler_dna_criador()
         memorias = banco_memoria.buscar_todas_notas()
+        tempo_real = obter_data_hora_atual()
+        
         instrucao_pub = (
-            "Você é a 'L.U.C.A. AI' (Lógica Unificada de Conhecimento e Ação), uma Inteligência Artificial geral criada para ajudar as pessoas com qualquer tarefa ou dúvida do dia a dia.\n"
+            f"Você é a 'L.U.C.A. AI' (Lógica Unificada de Conhecimento e Ação), atualmente na versão {VERSAO_IA} (em fase de desenvolvimento), criada por Luca de Brito Ferreira.\n"
+            f"DATA E HORA EXATA AGORA (Horário de Brasília): {tempo_real}. Sempre que o usuário perguntar que dia é hoje, a data atual ou que horas são, responda usando exatamente esses números!\n"
             f"INFORMAÇÕES DE CONTEXTO E DO CRIADOR (Use apenas se o usuário perguntar sobre o canal Luca Legal ou produtos): {dna}\n"
             f"ATUALIZAÇÕES E REGRAS SALVAS: {memorias}\n"
             "DIRETRIZES DE COMPORTAMENTO:\n"
@@ -220,32 +253,3 @@ with aba_publica:
             with st.spinner("Pensando..."):
                 resp = gerar_resposta(prompt_pub, conv_ativa["mensagens"][:-1], instrucao_pub, 0.7)
                 st.markdown(resp)
-        conv_ativa["mensagens"].append({"role": "assistant", "content": resp})
-        st.rerun()
-
-# --- ABA 2: ESTÚDIO DO CRIADOR (Protegido por senha) ---
-with aba_criador:
-    senha_digitada = st.text_input("🔑 Código de acesso do criador:", type="password", key="pwd_est")
-    if senha_digitada == SENHA_CRIADOR:
-        st.success("Identidade confirmada, Luca! Modo estrategista de YouTube ativado.")
-        if "hist_copiloto" not in st.session_state:
-            st.session_state.hist_copiloto = []
-
-        for msg in st.session_state.hist_copiloto:
-            avatar = "🎬" if msg["role"] == "assistant" else "🦸‍♂️"
-            with st.chat_message(msg["role"], avatar=avatar):
-                st.markdown(msg["content"])
-
-        if prompt_yt := st.chat_input("Peça uma ideia de vídeo, título ou roteiro...", key="in_yt"):
-            st.session_state.hist_copiloto.append({"role": "user", "content": prompt_yt})
-            with st.chat_message("user", avatar="🦸‍♂️"):
-                st.markdown(prompt_yt)
-
-            dna = ler_dna_criador()
-            memorias = banco_memoria.buscar_todas_notas()
-            instrucao_yt = (
-                "Você é a L.U.C.A. AI operando em modo privado para o criador Luca Legal nos bastidores.\n"
-                "Ajude a criar títulos de alto CTR, ganchos de 15s, roteiros virais e estratégias de engajamento.\n"
-                f"SEU DNA: {dna}\n"
-                f"MEMÓRIAS SALVAS: {memorias}"
-            )
