@@ -179,4 +179,3 @@ with aba_criador:
 
 with aba_memoria:
     senha_mem = st.text_input("🔑 Código de acesso para atualizar memória:", type="password", key="pwd_mem")
-    if senha_mem == SENHA_CRIADOR:
