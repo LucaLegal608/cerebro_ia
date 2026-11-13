@@ -15,18 +15,18 @@ st.set_page_config(
 )
 banco_memoria.iniciar_banco()
 
-# Puxa a chave do cofre secreto do Streamlit Cloud:
-CHAVE_API = st.secrets["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"]
+# Puxa a chave do cofre secreto do Streamlit Cloud (NÃO escreva sua chave aqui):
+CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 # SENHA DO CRIADOR E VERSÃO ATUAL:
 SENHA_CRIADOR = "947298688"
 VERSAO_IA = "BETA • v1.0"
 
-# Função para capturar data e hora exatas sincronizadas
+# Função para capturar data e hora exatas no fuso de Brasília (GMT-03:00)
 def obter_data_hora_atual():
-    fuso_local = timezone(timedelta(hours=-1))
-    agora = datetime.now(fuso_local)
+    fuso_brasilia = timezone(timedelta(hours=-3))
+    agora = datetime.now(fuso_brasilia)
     dias_semana = [
         "Segunda-feira", "Terça-feira", "Quarta-feira",
         "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"
@@ -248,6 +248,3 @@ with aba_publica:
             "1. ASSISTENTE UNIVERSAL DO DIA A DIA: Seu objetivo principal é ajudar o usuário com absolutamente qualquer assunto — estudos, resumos, programação, receitas, dicas práticas, trabalho, conselhos, escrita, jogos ou curiosidades gerais.\n"
             "2. SEM FOCO FIXO: Não force assuntos específicos se o usuário não perguntou sobre isso. Responda diretamente ao que a pessoa precisa.\n"
             "3. IDENTIDADE PÚBLICA: NUNCA trate o usuário como dono do sistema. Proibido dizer 'sua IA', 'seu canal' ou 'seus vídeos'. Fale como uma assistente inteligente acessível a todos.\n"
-            "4. TOM DE VOZ: Seja clara, educada, ágil, prestativa e bem-humorada na medida certa (adequada para todas as idades)."
-        )
-        
