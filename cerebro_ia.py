@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -6,14 +7,19 @@ from groq import Groq
 import streamlit as st
 import banco_memoria
 
-st.set_page_config(page_title="L.U.C.A IA (BETA v1.0) — Lógica Unificada de Conhecimento e Ação", page_icon="🤖", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(
+    page_title="L.U.C.A IA (BETA v1.2) — Lógica Unificada de Conhecimento e Ação",
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 banco_memoria.iniciar_banco()
 
 CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 SENHA_CRIADOR = "947298688"
-VERSAO_IA = "BETA • v1.0"
+VERSAO_IA = "BETA • v1.2"
 
 def obter_data_hora_atual():
     fuso_brasilia = timezone(timedelta(hours=-3))
@@ -21,7 +27,7 @@ def obter_data_hora_atual():
     dias_semana = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias_semana[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! 🤖 Eu sou a **L.U.C.A IA** (*Lógica Unificada de Conhecimento e Ação* — **BETA v1.0**). Fui feita para te ajudar com **qualquer coisa do dia a dia** — desde tirar dúvidas de estudos, escrever mensagens, organizar ideias e aprender coisas novas até bater um papo sobre qualquer assunto. O que você precisa resolver hoje? ⚡"
+MENSAGEM_INICIAL = "Sistemas inicializados! 🤖⚡ Eu sou a **L.U.C.A IA** (*Lógica Unificada de Conhecimento e Ação* — **BETA v1.2**). Estou online para ajudar com **qualquer tarefa do seu dia a dia** — estudos, programação, ideias criativas, receitas ou qualquer dúvida. Como posso ajudar agora?"
 
 if "conversas" not in st.session_state:
     id_inicial = str(uuid.uuid4())
@@ -41,16 +47,115 @@ def excluir_conversa(id_conv):
     else:
         st.session_state.conversas[id_conv] = {"titulo": "Nova conversa", "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]}
 
+# CSS AVANÇADO: TEMA FUTURISTA / CYBERPUNK NEON
 st.markdown("""
 <style>
-    .hero-banner { background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 55%, #0284C7 100%); padding: 1.8rem; border-radius: 16px; color: white; margin-bottom: 1.5rem; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 8px 25px rgba(2, 132, 199, 0.2); }
-    .hero-banner h1 { margin: 0; font-size: 1.9rem; font-weight: 800; letter-spacing: 0.5px; line-height: 1.3; }
-    .hero-banner .sigla-lado { font-size: 1.1rem; color: #38BDF8; font-weight: 600; }
-    .badge-beta { background-color: rgba(56, 189, 248, 0.2); border: 1px solid #38BDF8; color: #E0F2FE; font-size: 0.78rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; vertical-align: middle; margin-left: 8px; letter-spacing: 0.8px; }
-    .hero-banner p { margin: 0.6rem 0 0 0; font-size: 1rem; opacity: 0.92; }
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] { border-radius: 8px 8px 0px 0px; padding: 10px 20px; font-weight: 600; }
-    [data-testid="stChatMessage"] { border-radius: 12px; padding: 1rem; margin-bottom: 0.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+    @import url('https://googleapis.com');
+
+    /* Fundo principal estilo espaço profundo */
+    .stApp {
+        background: radial-gradient(circle at top right, #0B192C 0%, #050811 60%, #020408 100%);
+        color: #E2E8F0;
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* Esconde barra superior padrão do Streamlit */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+    }
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+
+    /* Barra lateral futurista */
+    section[data-testid="stSidebar"] {
+        background-color: rgba(8, 14, 28, 0.92) !important;
+        border-right: 1px solid rgba(0, 243, 255, 0.25);
+        box-shadow: 4px 0 25px rgba(0, 243, 255, 0.05);
+    }
+
+    /* Banner Principal Cyberpunk */
+    .cyber-banner {
+        background: linear-gradient(135deg, rgba(13, 25, 48, 0.85) 0%, rgba(28, 16, 56, 0.85) 100%);
+        backdrop-filter: blur(12px);
+        padding: 1.8rem 2rem;
+        border-radius: 16px;
+        border: 1px solid rgba(0, 243, 255, 0.45);
+        box-shadow: 0 0 25px rgba(0, 243, 255, 0.15), inset 0 0 15px rgba(157, 78, 221, 0.15);
+        margin-bottom: 1.5rem;
+    }
+    .cyber-title {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 2rem;
+        font-weight: 800;
+        background: linear-gradient(90deg, #00F3FF 0%, #7B2CBF 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
+        letter-spacing: 1px;
+    }
+    .cyber-sub {
+        color: #38BDF8;
+        font-size: 1rem;
+        font-weight: 600;
+        margin-top: 4px;
+        letter-spacing: 0.5px;
+    }
+    .badge-neon {
+        display: inline-block;
+        background: rgba(0, 243, 255, 0.12);
+        border: 1px solid #00F3FF;
+        color: #00F3FF;
+        font-family: 'Orbitron', sans-serif;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 999px;
+        box-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+        margin-left: 10px;
+        vertical-align: middle;
+    }
+    .cyber-desc {
+        color: #CBD5E1;
+        margin-top: 0.7rem;
+        font-size: 0.98rem;
+    }
+
+    /* Botões Neon */
+    .stButton > button {
+        border-radius: 10px !important;
+        border: 1px solid rgba(0, 243, 255, 0.35) !important;
+        background: rgba(15, 23, 42, 0.75) !important;
+        color: #E0F2FE !important;
+        transition: all 0.25s ease !important;
+    }
+    .stButton > button:hover {
+        border-color: #00F3FF !important;
+        box-shadow: 0 0 15px rgba(0, 243, 255, 0.45) !important;
+        transform: translateY(-1px);
+    }
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(90deg, #0284C7 0%, #7C3AED 100%) !important;
+        border: 1px solid #00F3FF !important;
+        color: white !important;
+        font-weight: 700 !important;
+    }
+
+    /* Balões do Chat estilo Holograma */
+    [data-testid="stChatMessage"] {
+        background: rgba(15, 23, 42, 0.65) !important;
+        border: 1px solid rgba(56, 189, 248, 0.22) !important;
+        border-radius: 14px !important;
+        padding: 1rem !important;
+        margin-bottom: 0.7rem !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    /* Caixa de digitação inferior */
+    [data-testid="stChatInput"] {
+        border-radius: 14px !important;
+        border: 1px solid rgba(0, 243, 255, 0.4) !important;
+        background-color: rgba(10, 18, 36, 0.9) !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -83,7 +188,7 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     for modelo in modelos_disponiveis:
         try:
             resposta = client.chat.completions.create(model=modelo, messages=mensagens_formatadas, temperature=temperatura)
-            return resposta.choices[0].message.content
+            return resposta.choices.message.content
         except Exception as erro:
             ultimo_erro = str(erro)
             time.sleep(1)
@@ -91,19 +196,30 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
 
     return f"⚠️ Não foi possível responder agora. Detalhe técnico: {ultimo_erro}"
 
+def processar_envio_publico(texto_usuario):
+    conv_ativa = st.session_state.conversas[st.session_state.conversa_atual]
+    if conv_ativa["titulo"] == "Nova conversa":
+        conv_ativa["titulo"] = texto_usuario[:26] + ("..." if len(texto_usuario) > 26 else "")
+    conv_ativa["mensagens"].append({"role": "user", "content": texto_usuario})
+    instrucao_pub = f"Você é a 'L.U.C.A IA' (Lógica Unificada de Conhecimento e Ação), versão {VERSAO_IA} (em fase de desenvolvimento), criada por Luca de Brito Ferreira. IDIOMA OBRIGATÓRIO: Fale EXCLUSIVAMENTE em Português do Brasil natural, fluido e amigável (nunca use português de Portugal como 'oiça'). CONTEXTO DO CRIADOR (use apenas se perguntarem sobre o canal Luca Legal): {ler_dna_criador()}. ATUALIZAÇÕES SALVAS: {banco_memoria.buscar_todas_notas()}. DIRETRIZES: 1) Ajude com absolutamente qualquer assunto do dia a dia de forma leve, direta e inteligente. 2) Nunca trate o visitante como dono do sistema. 3) Converse de forma humana e natural."
+    resp = gerar_resposta(texto_usuario, conv_ativa["mensagens"][:-1], instrucao_pub, 0.7)
+    conv_ativa["mensagens"].append({"role": "assistant", "content": resp})
+
+# BARRA LATERAL FUTURISTA
 with st.sidebar:
-    st.markdown(f"## 🤖 L.U.C.A IA `{VERSAO_IA}`")
-    st.caption("Lógica Unificada de Conhecimento e Ação")
+    st.markdown(f"<div style='font-family:Orbitron; font-size:1.35rem; font-weight:800; color:#00F3FF;'>🤖 L.U.C.A IA</div>", unsafe_allow_html=True)
+    st.caption(f"Lógica Unificada de Conhecimento e Ação")
     st.caption(f"🕒 {obter_data_hora_atual()}")
-    if st.button("➕ Nova Conversa", use_container_width=True, type="primary"):
+    
+    if st.button("➕ Nova Sessão Neural", use_container_width=True, type="primary"):
         criar_nova_conversa()
         st.rerun()
 
-    st.markdown("### 💬 Suas Conversas")
+    st.markdown("### 📡 Histórico de Sessões")
     for id_conv in reversed(list(st.session_state.conversas.keys())):
         dados_conv = st.session_state.conversas[id_conv]
         col_titulo, col_del = st.columns([0.82, 0.18])
-        icone_chat = "🔵" if id_conv == st.session_state.conversa_atual else "💬"
+        icone_chat = "💠" if id_conv == st.session_state.conversa_atual else "💬"
         with col_titulo:
             if st.button(f"{icone_chat} {dados_conv['titulo']}", key=f"btn_{id_conv}", use_container_width=True):
                 st.session_state.conversa_atual = id_conv
@@ -114,56 +230,7 @@ with st.sidebar:
                 st.rerun()
 
     st.divider()
-    st.caption(f"Status: 🟢 Online • {VERSAO_IA}")
+    st.caption(f"Núcleo: 🟢 Online • `{VERSAO_IA}`")
     st.caption("Criado por Luca de Brito Ferreira")
-    st.caption("Esta IA está em fase de desenvolvimento.")
+    st.caption("⚠️ Esta IA está em fase de desenvolvimento.")
 
-st.markdown(f"""
-<div class="hero-banner">
-    <h1>🤖 L.U.C.A IA <span class="sigla-lado">— Lógica Unificada de Conhecimento e Ação</span> <span class="badge-beta">{VERSAO_IA}</span></h1>
-    <p>Sua assistente inteligente para ajudar com qualquer coisa do dia a dia — estudos, trabalho, ideias, dúvidas gerais e muito mais!</p>
-</div>
-""", unsafe_allow_html=True)
-
-aba_publica, aba_criador, aba_memoria = st.tabs(["💬 Chat Aberto (Público)", "🎬 Núcleo do Criador (Restrito)", "💾 Banco de Dados (Restrito)"])
-
-with aba_publica:
-    conv_ativa = st.session_state.conversas[st.session_state.conversa_atual]
-    for msg in conv_ativa["mensagens"]:
-        with st.chat_message(msg["role"], avatar="🤖" if msg["role"] == "assistant" else "👤"):
-            st.markdown(msg["content"])
-
-    if prompt_pub := st.chat_input("Pergunte ou peça ajuda com qualquer coisa...", key="in_pub"):
-        if conv_ativa["titulo"] == "Nova conversa":
-            conv_ativa["titulo"] = prompt_pub[:28] + ("..." if len(prompt_pub) > 28 else "")
-        conv_ativa["mensagens"].append({"role": "user", "content": prompt_pub})
-        instrucao_pub = f"Você é a 'L.U.C.A IA' (Lógica Unificada de Conhecimento e Ação), versão {VERSAO_IA} (em fase de desenvolvimento), criada por Luca de Brito Ferreira. IDIOMA OBRIGATÓRIO: Fale EXCLUSIVAMENTE em Português do Brasil natural, fluido e amigável (nunca use português de Portugal como 'oiça'). CONTEXTO DO CRIADOR (use apenas se perguntarem sobre o canal Luca Legal): {ler_dna_criador()}. ATUALIZAÇÕES SALVAS: {banco_memoria.buscar_todas_notas()}. DIRETRIZES: 1) Ajude com absolutamente qualquer assunto do dia a dia de forma leve, direta e inteligente. 2) Nunca trate o visitante como dono do sistema. 3) Converse de forma humana e natural."
-        resp = gerar_resposta(prompt_pub, conv_ativa["mensagens"][:-1], instrucao_pub, 0.7)
-        conv_ativa["mensagens"].append({"role": "assistant", "content": resp})
-        st.rerun()
-
-with aba_criador:
-    senha_est = st.text_input("🔑 Código de acesso do criador:", type="password", key="pwd_est")
-    if senha_est != "" and senha_est != SENHA_CRIADOR:
-        st.error("Acesso negado. Código incorreto.")
-    if senha_est == SENHA_CRIADOR:
-        st.success(f"Identidade confirmada, Luca! Modo estrategista ativado ({VERSAO_IA}).")
-        if "hist_copiloto" not in st.session_state:
-            st.session_state.hist_copiloto = []
-        for msg in st.session_state.hist_copiloto:
-            with st.chat_message(msg["role"], avatar="🎬" if msg["role"] == "assistant" else "🦸‍♂️"):
-                st.markdown(msg["content"])
-        if prompt_yt := st.chat_input("Peça uma ideia de vídeo, título ou roteiro...", key="in_yt"):
-            st.session_state.hist_copiloto.append({"role": "user", "content": prompt_yt})
-            instrucao_yt = f"Você é a L.U.C.A IA ({VERSAO_IA}) operando em modo privado para o criador Luca Legal nos bastidores em Português do Brasil. Ajude a criar títulos de alto CTR, ganchos de 15s, roteiros virais e estratégias de engajamento. SEU DNA: {ler_dna_criador()}. MEMÓRIAS SALVAS: {banco_memoria.buscar_todas_notas()}"
-            resp = gerar_resposta(prompt_yt, st.session_state.hist_copiloto[:-1], instrucao_yt, 0.8)
-            st.session_state.hist_copiloto.append({"role": "assistant", "content": resp})
-            st.rerun()
-
-with aba_memoria:
-    senha_mem = st.text_input("🔑 Código de acesso para atualizar memória:", type="password", key="pwd_mem")
-    if senha_mem != "" and senha_mem != SENHA_CRIADOR:
-        st.error("Acesso negado. Código incorreto.")
-    if senha_mem == SENHA_CRIADOR:
-        st.caption(f"Insira novos dados no núcleo da L.U.C.A IA ({VERSAO_IA}).")
-        cat = st.selectbox("Categoria", ["Novidade", "Produto/Link", "Informação Geral", "Regra de Resposta"])
