@@ -8,7 +8,7 @@ import streamlit as st
 import banco_memoria
 
 st.set_page_config(
-    page_title="L.U.C.A IA (BETA v1.3) — Lógica Unificada de Conhecimento e Ação",
+    page_title="L.U.C.A IA (BETA v1.4) — Lógica Unificada de Conhecimento e Ação",
     page_icon="✨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -19,7 +19,7 @@ CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 SENHA_CRIADOR = "947298688"
-VERSAO_IA = "BETA • v1.3"
+VERSAO_IA = "BETA • v1.4"
 
 def obter_data_hora_atual():
     fuso_brasilia = timezone(timedelta(hours=-3))
@@ -27,17 +27,21 @@ def obter_data_hora_atual():
     dias_semana = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias_semana[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! ✨ Eu sou a **L.U.C.A IA** (*Lógica Unificada de Conhecimento e Ação* — **BETA v1.3**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — estudos, ideias, textos, programação ou dúvidas gerais. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! ✨ Eu sou a **L.U.C.A IA** (*Lógica Unificada de Conhecimento e Ação* — **BETA v1.4**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — estudos, ideias, textos, programação ou dúvidas gerais. Como posso ajudar hoje?"
 
 if "conversas" not in st.session_state:
     id_inicial = str(uuid.uuid4())
     st.session_state.conversas = {id_inicial: {"titulo": "Nova conversa", "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]}}
     st.session_state.conversa_atual = id_inicial
 
+if "modo_tela" not in st.session_state:
+    st.session_state.modo_tela = "chat"
+
 def criar_nova_conversa():
     novo_id = str(uuid.uuid4())
     st.session_state.conversas[novo_id] = {"titulo": "Nova conversa", "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]}
     st.session_state.conversa_atual = novo_id
+    st.session_state.modo_tela = "chat"
 
 def excluir_conversa(id_conv):
     if len(st.session_state.conversas) > 1:
@@ -47,26 +51,23 @@ def excluir_conversa(id_conv):
     else:
         st.session_state.conversas[id_conv] = {"titulo": "Nova conversa", "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]}
 
-# CSS AVANÇADO: ESTILO GEMINI / CHATGPT MINIMALISTA CLARO
+# CSS ESTILO GEMINI / CHATGPT + BRILHO CIANO NEON NO HOVER DE TODOS OS BOTÕES
 st.markdown("""
 <style>
     @import url('https://googleapis.com');
 
-    /* Fundo principal claro e limpo */
     .stApp {
         background-color: #FFFFFF !important;
         color: #1F1F1F !important;
         font-family: 'Plus Jakarta Sans', sans-serif;
     }
 
-    /* Esconde menus técnicos do Streamlit */
     header[data-testid="stHeader"] {
         background: transparent !important;
     }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    /* Barra lateral suave estilo Gemini */
     section[data-testid="stSidebar"] {
         background-color: #F8FAFD !important;
         border-right: 1px solid #E2E8F0 !important;
@@ -75,16 +76,15 @@ st.markdown("""
         color: #1F1F1F !important;
     }
 
-    /* Cabeçalho Minimalista Estilo Gemini */
     .gemini-header {
-        padding: 1.2rem 0.5rem 1rem 0.5rem;
+        padding: 1rem 0.5rem 0.8rem 0.5rem;
         margin-bottom: 1rem;
-        border-bottom: 1px solid #F1F5F9;
+        border-bottom: 1px solid #E2E8F0;
     }
     .gemini-title {
         font-size: 2.1rem;
         font-weight: 700;
-        background: linear-gradient(90deg, #1A73E8 0%, #8AB4F8 35%, #9B72CB 70%, #D96570 100%);
+        background: linear-gradient(90deg, #1A73E8 0%, #00B4D8 40%, #9B72CB 75%, #D96570 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         display: inline-block;
@@ -98,62 +98,74 @@ st.markdown("""
         margin-left: 8px;
     }
     .badge-gemini {
-        background-color: #E8F0FE;
-        color: #1967D2;
+        background-color: #E0F7FA;
+        color: #00838F;
+        border: 1px solid #00E5FF;
         font-size: 0.75rem;
-        font-weight: 600;
-        padding: 4px 12px;
+        font-weight: 700;
+        padding: 3px 12px;
         border-radius: 999px;
         vertical-align: middle;
         margin-left: 10px;
     }
     .gemini-subtitle {
         color: #5F6368;
-        font-size: 1rem;
-        margin-top: 0.35rem;
+        font-size: 0.98rem;
+        margin-top: 0.3rem;
     }
 
-    /* Botões estilo pílula/cartão limpo */
+    /* TODOS OS BOTÕES COM BRILHO CIANO INTENSO AO PASSAR O MOUSE */
     .stButton > button {
         border-radius: 14px !important;
-        border: 1px solid #E2E8F0 !important;
+        border: 1px solid #CBD5E1 !important;
         background-color: #F8FAFD !important;
         color: #1F1F1F !important;
-        font-weight: 500 !important;
+        font-weight: 600 !important;
         padding: 0.55rem 1rem !important;
-        transition: all 0.2s ease !important;
-        box-shadow: none !important;
+        transition: all 0.25s ease-in-out !important;
     }
     .stButton > button:hover {
-        background-color: #EEF3FC !important;
-        border-color: #D2E3FC !important;
-        color: #1967D2 !important;
+        background-color: #00E5FF !important;
+        border-color: #00B8D4 !important;
+        color: #002535 !important;
+        box-shadow: 0 0 18px rgba(0, 229, 255, 0.85), 0 0 6px rgba(0, 229, 255, 0.6) !important;
+        transform: translateY(-1px) !important;
     }
     .stButton > button[kind="primary"] {
         background-color: #D3E3FD !important;
-        border: none !important;
+        border: 1px solid #90CAF9 !important;
         color: #041E49 !important;
-        font-weight: 600 !important;
     }
     .stButton > button[kind="primary"]:hover {
-        background-color: #C2D7FA !important;
+        background-color: #00E5FF !important;
+        border-color: #00B8D4 !important;
+        color: #002535 !important;
+        box-shadow: 0 0 20px rgba(0, 229, 255, 0.9) !important;
     }
 
-    /* Mensagens do Chat estilo Gemini */
+    /* Balões de conversa */
     [data-testid="stChatMessage"] {
         background-color: #F8FAFD !important;
-        border: 1px solid #EDF2F7 !important;
+        border: 1px solid #E2E8F0 !important;
         border-radius: 18px !important;
         padding: 1rem 1.2rem !important;
         margin-bottom: 0.75rem !important;
         color: #1F1F1F !important;
     }
 
-    /* Caixa de texto inferior arredondada */
+    /* Barra inferior de digitação visível e interativa */
+    [data-testid="stBottom"] {
+        background-color: #FFFFFF !important;
+        border-top: 1px solid #E2E8F0 !important;
+    }
     [data-testid="stChatInput"] {
         border-radius: 24px !important;
-        border: 1px solid #CBD5E1 !important;
-        background-color: #F0F4F9 !important;
+        border: 2px solid #CBD5E1 !important;
+        background-color: #F8FAFD !important;
+    }
+    [data-testid="stChatInput"]:focus-within {
+        border-color: #00E5FF !important;
+        box-shadow: 0 0 14px rgba(0, 229, 255, 0.45) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -204,7 +216,7 @@ def processar_envio_publico(texto_usuario):
     resp = gerar_resposta(texto_usuario, conv_ativa["mensagens"][:-1], instrucao_pub, 0.7)
     conv_ativa["mensagens"].append({"role": "assistant", "content": resp})
 
-# BARRA LATERAL LIMPA ESTILO GEMINI
+# BARRA LATERAL
 with st.sidebar:
     st.markdown("### ✨ L.U.C.A IA")
     st.caption("Lógica Unificada de Conhecimento e Ação")
@@ -222,6 +234,7 @@ with st.sidebar:
         with col_titulo:
             if st.button(f"{icone_chat} {dados_conv['titulo']}", key=f"btn_{id_conv}", use_container_width=True):
                 st.session_state.conversa_atual = id_conv
+                st.session_state.modo_tela = "chat"
                 st.rerun()
         with col_del:
             if st.button("🗑️", key=f"del_{id_conv}", help="Apagar conversa"):
@@ -229,21 +242,5 @@ with st.sidebar:
                 st.rerun()
 
     st.divider()
-    st.caption(f"Status: 🟢 Online • {VERSAO_IA}")
-    st.caption("Criado por Luca de Brito Ferreira")
-    st.caption("Esta IA está em fase de desenvolvimento.")
-
-# CABEÇALHO PRINCIPAL ESTILO GEMINI
-st.markdown(f"""
-<div class="gemini-header">
-    <div>
-        <span class="gemini-title">✨ L.U.C.A IA</span>
-        <span class="gemini-sigla">— Lógica Unificada de Conhecimento e Ação</span>
-        <span class="badge-gemini">{VERSAO_IA}</span>
-    </div>
-    <div class="gemini-subtitle">Sua assistente inteligente para ajudar com qualquer coisa do dia a dia.</div>
-</div>
-""", unsafe_allow_html=True)
-
-aba_publica, aba_criador, aba_memoria = st.tabs(["💬 Chat", "🎬 Estúdio do Criador", "💾 Banco de Dados"])
-
+    st.markdown("##### ⚙️ Painel do Sistema")
+    if st.button("💬 Chat Público", use_container_width=True):
