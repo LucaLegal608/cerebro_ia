@@ -72,32 +72,6 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     modelos_disponiveis = []
     try:
         for m in client.models.list().data:
-            if not any(x in m.id.lower() for x in ["whisper", "guard", "tts", "vision", "8b"]):
-                modelos_disponiveis.append(m.id)
-    except Exception as e:
-        return f"⚠️ Erro de conexão com a chave da API: verifique sua chave no Secrets do Streamlit. ({e})"
-
-    modelos_disponiveis.sort(key=lambda x: ("llama-3.3" not in x and "70b" not in x and "120b" not in x, x))
-
-    for modelo in modelos_disponiveis:
-        try:
-            resposta = client.chat.completions.create(model=modelo, messages=mensagens_formatadas, temperature=temperatura)
-            return resposta.choices.message.content
-        except Exception:
-            time.sleep(1.5)
-            continue
-
-    return "def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
-    tempo_exato = obter_data_hora_atual()
-    sistema_completo = f"{instrucao_sistema}\n\n[DADO INTERNO SILENCIOSO - DATA E HORA ATUAL EM BRASÍLIA: {tempo_exato}. NUNCA imprima esse colchete na resposta. Use essa informação apenas se o usuário perguntar que dia é hoje ou que horas são.]"
-    mensagens_formatadas = [{"role": "system", "content": sistema_completo}]
-    for item in historico[-10:]:
-        mensagens_formatadas.append({"role": item["role"], "content": item["content"]})
-    mensagens_formatadas.append({"role": "user", "content": mensagem})
-
-    modelos_disponiveis = []
-    try:
-        for m in client.models.list().data:
             if not any(x in m.id.lower() for x in ["whisper", "guard", "tts", "vision"]):
                 modelos_disponiveis.append(m.id)
     except Exception as e:
@@ -116,7 +90,6 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
             continue
 
     return f"⚠️ Não foi possível responder agora. Detalhe técnico: {ultimo_erro}"
-"
 
 with st.sidebar:
     st.markdown(f"## 🤖 L.U.C.A IA `{VERSAO_IA}`")
@@ -143,7 +116,7 @@ with st.sidebar:
     st.divider()
     st.caption(f"Status: 🟢 Online • {VERSAO_IA}")
     st.caption("Criado por Luca de Brito Ferreira")
-    st.caption("⚠️ Esta IA está em fase de desenvolvimento.")
+    st.caption("Esta IA está em fase de desenvolvimento.")
 
 st.markdown(f"""
 <div class="hero-banner">
