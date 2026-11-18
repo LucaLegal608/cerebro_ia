@@ -7,21 +7,21 @@ from groq import Groq
 import streamlit as st
 import banco_memoria
 
-st.set_page_config(page_title="L.U.C.A IA (BETA v1.4) — Lógica Unificada de Conhecimento e Ação", page_icon="✨", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="L.U.C.A IA (BETA v1.5) — Lógica Unificada de Conhecimento e Ação", page_icon=":material/auto_awesome:", layout="wide", initial_sidebar_state="expanded")
 banco_memoria.iniciar_banco()
 
 CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 SENHA_CRIADOR = "947298688"
-VERSAO_IA = "BETA • v1.4"
+VERSAO_IA = "BETA • v1.5"
 
 def obter_data_hora_atual():
     agora = datetime.now(timezone(timedelta(hours=-3)))
     dias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! ✨ Eu sou a **L.U.C.A IA** (*Lógica Unificada de Conhecimento e Ação* — **BETA v1.4**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — estudos, ideias, textos, programação ou dúvidas gerais. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.A IA** (*Lógica Unificada de Conhecimento e Ação* — **BETA v1.5**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — estudos, ideias, textos, programação ou dúvidas gerais. Como posso ajudar hoje?"
 
 if "conversas" not in st.session_state:
     id_ini = str(uuid.uuid4())
@@ -89,7 +89,7 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
             if not any(x in m.id.lower() for x in ["whisper", "guard", "tts", "vision"]):
                 modelos.append(m.id)
     except Exception as e:
-        return f"⚠️ Erro na chave da API: {e}"
+        return f"Erro na chave da API: {e}"
 
     modelos.sort(key=lambda x: ("llama-3.3" not in x and "70b" not in x and "120b" not in x, x))
     ultimo_erro = ""
@@ -100,7 +100,7 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
         except Exception as erro:
             ultimo_erro = str(erro)
             time.sleep(1)
-    return f"⚠️ Não foi possível responder agora. Detalhe: {ultimo_erro}"
+    return f"Não foi possível responder agora. Detalhe: {ultimo_erro}"
 
 def processar_envio_publico(texto_usuario):
     conv = st.session_state.conversas[st.session_state.conversa_atual]
@@ -111,64 +111,65 @@ def processar_envio_publico(texto_usuario):
     conv["mensagens"].append({"role": "assistant", "content": gerar_resposta(texto_usuario, conv["mensagens"][:-1], inst, 0.7)})
 
 with st.sidebar:
-    st.markdown("### ✨ L.U.C.A IA")
+    st.markdown("### :material/auto_awesome: L.U.C.A IA")
     st.caption("Lógica Unificada de Conhecimento e Ação")
-    st.caption(f"🕒 {obter_data_hora_atual()}")
-    if st.button("➕ Nova conversa", use_container_width=True, type="primary"):
+    st.caption(f":material/schedule: {obter_data_hora_atual()}")
+    if st.button("Nova conversa", icon=":material/add_comment:", use_container_width=True, type="primary"):
         criar_nova_conversa()
         st.rerun()
 
     st.markdown("##### Recentes")
     for id_conv in reversed(list(st.session_state.conversas.keys())):
         dados = st.session_state.conversas[id_conv]
-        c_tit, c_del = st.columns([0.82, 0.18])
-        if c_tit.button(f"{'💬' if id_conv == st.session_state.conversa_atual else '🗨️'} {dados['titulo']}", key=f"btn_{id_conv}", use_container_width=True):
+        c_tit, c_del = st.columns([0.80, 0.20])
+        icone_chat = ":material/chat:" if id_conv == st.session_state.conversa_atual else ":material/chat_bubble_outline:"
+        if c_tit.button(dados["titulo"], icon=icone_chat, key=f"btn_{id_conv}", use_container_width=True):
             st.session_state.conversa_atual = id_conv
             st.session_state.modo_tela = "chat"
             st.rerun()
-        if c_del.button("🗑️", key=f"del_{id_conv}"):
+        if c_del.button("", icon=":material/delete:", key=f"del_{id_conv}"):
             excluir_conversa(id_conv)
             st.rerun()
 
     st.divider()
-    st.markdown("##### ⚙️ Painel")
-    if st.button("💬 Chat Público", use_container_width=True):
+    st.markdown("##### Painel")
+    if st.button("Chat Público", icon=":material/forum:", use_container_width=True):
         st.session_state.modo_tela = "chat"
         st.rerun()
-    if st.button("🎬 Estúdio do Criador", use_container_width=True):
+    if st.button("Estúdio do Criador", icon=":material/movie_edit:", use_container_width=True):
         st.session_state.modo_tela = "estudio"
         st.rerun()
-    if st.button("💾 Banco de Dados", use_container_width=True):
+    if st.button("Banco de Dados", icon=":material/database:", use_container_width=True):
         st.session_state.modo_tela = "memoria"
         st.rerun()
 
     st.divider()
-    st.caption(f"Status: 🟢 Online • {VERSAO_IA}")
+    st.caption(f"Status: Online • {VERSAO_IA}")
     st.caption("Criado por Luca de Brito Ferreira")
     st.caption("Esta IA está em fase de desenvolvimento.")
 
-st.markdown(f"<div class='gemini-header'><div><span class='gemini-title'>✨ L.U.C.A IA</span><span class='gemini-sigla'>— Lógica Unificada de Conhecimento e Ação</span><span class='badge-gemini'>{VERSAO_IA}</span></div><div class='gemini-subtitle'>Sua assistente inteligente para ajudar com qualquer coisa do dia a dia.</div></div>", unsafe_allow_html=True)
+st.markdown(f"<div class='gemini-header'><div><span class='gemini-title'>L.U.C.A IA</span><span class='gemini-sigla'>— Lógica Unificada de Conhecimento e Ação</span><span class='badge-gemini'>{VERSAO_IA}</span></div><div class='gemini-subtitle'>Sua assistente inteligente para ajudar com qualquer coisa do dia a dia.</div></div>", unsafe_allow_html=True)
 
 if st.session_state.modo_tela == "chat":
     conv = st.session_state.conversas[st.session_state.conversa_atual]
     if len(conv["mensagens"]) == 1:
         st.caption("Sugestões para começar:")
         c1, c2, c3, c4 = st.columns(4)
-        if c1.button("📚 Me ajude a estudar", use_container_width=True):
+        if c1.button("Me ajude a estudar", icon=":material/school:", use_container_width=True):
             processar_envio_publico("Me ajude a estudar e resumir um assunto importante hoje!")
             st.rerun()
-        if c2.button("💻 Criar um código", use_container_width=True):
+        if c2.button("Criar um código", icon=":material/code:", use_container_width=True):
             processar_envio_publico("Quero ajuda para criar ou entender um código de programação.")
             st.rerun()
-        if c3.button("🍳 Receita prática", use_container_width=True):
+        if c3.button("Receita prática", icon=":material/restaurant:", use_container_width=True):
             processar_envio_publico("Me sugira uma receita rápida, gostosa e fácil de fazer hoje!")
             st.rerun()
-        if c4.button("💡 Ideias criativas", use_container_width=True):
+        if c4.button("Ideias criativas", icon=":material/lightbulb:", use_container_width=True):
             processar_envio_publico("Preciso de ideias criativas para um projeto novo!")
             st.rerun()
 
     for msg in conv["mensagens"]:
-        with st.chat_message(msg["role"], avatar="✨" if msg["role"] == "assistant" else "👤"):
+        with st.chat_message(msg["role"], avatar=":material/auto_awesome:" if msg["role"] == "assistant" else ":material/person:"):
             st.markdown(msg["content"])
 
     if prompt_pub := st.chat_input("Pergunte à L.U.C.A IA..."):
@@ -176,8 +177,8 @@ if st.session_state.modo_tela == "chat":
         st.rerun()
 
 elif st.session_state.modo_tela == "estudio":
-    st.subheader("🎬 Estúdio do Criador (Acesso Restrito)")
-    senha_est = st.text_input("🔑 Código de acesso:", type="password", key="pwd_est")
+    st.subheader("Estúdio do Criador (Acesso Restrito)")
+    senha_est = st.text_input("Código de acesso:", type="password", key="pwd_est")
     if senha_est != "" and senha_est != SENHA_CRIADOR:
         st.error("Código incorreto.")
     if senha_est == SENHA_CRIADOR:
@@ -185,7 +186,7 @@ elif st.session_state.modo_tela == "estudio":
         if "hist_copiloto" not in st.session_state:
             st.session_state.hist_copiloto = []
         for msg in st.session_state.hist_copiloto:
-            with st.chat_message(msg["role"], avatar="🎬" if msg["role"] == "assistant" else "🦸‍♂️"):
+            with st.chat_message(msg["role"], avatar=":material/movie_edit:" if msg["role"] == "assistant" else ":material/person:"):
                 st.markdown(msg["content"])
         if prompt_yt := st.chat_input("Peça roteiros ou atualize a memória por conversa...", key="in_yt"):
             st.session_state.hist_copiloto.append({"role": "user", "content": prompt_yt})
@@ -195,22 +196,22 @@ elif st.session_state.modo_tela == "estudio":
             if match:
                 txt = match.group(1).strip()
                 banco_memoria.salvar_nota("Atualização via Chat", txt)
-                resp = re.sub(r"\[SALVAR_MEMORIA:.*?\]", "", resp, flags=re.DOTALL).strip() + f"\n\n💾 *Salvo na memória:* `{txt}`"
+                resp = re.sub(r"\[SALVAR_MEMORIA:.*?\]", "", resp, flags=re.DOTALL).strip() + f"\n\n*Salvo na memória:* `{txt}`"
             st.session_state.hist_copiloto.append({"role": "assistant", "content": resp})
             st.rerun()
 
 elif st.session_state.modo_tela == "memoria":
-    st.subheader("💾 Banco de Dados (Acesso Restrito)")
-    senha_mem = st.text_input("🔑 Código de acesso:", type="password", key="pwd_mem")
+    st.subheader("Banco de Dados (Acesso Restrito)")
+    senha_mem = st.text_input("Código de acesso:", type="password", key="pwd_mem")
     if senha_mem != "" and senha_mem != SENHA_CRIADOR:
         st.error("Código incorreto.")
     if senha_mem == SENHA_CRIADOR:
         cat = st.selectbox("Categoria", ["Novidade", "Produto/Link", "Informação Geral", "Regra de Resposta"])
         nota = st.text_area("O que a L.U.C.A IA deve memorizar?")
-        if st.button("Salvar Manualmente", type="primary"):
+        if st.button("Salvar Manualmente", icon=":material/save:", type="primary"):
             if nota.strip():
                 banco_memoria.salvar_nota(cat, nota)
-                st.success("✅ Salvo!")
+                st.success("Salvo com sucesso!")
                 st.rerun()
         st.divider()
         st.info(banco_memoria.buscar_todas_notas() or "Nenhuma memória extra salva.")
