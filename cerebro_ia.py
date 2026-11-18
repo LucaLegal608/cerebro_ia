@@ -8,7 +8,7 @@ import streamlit as st
 import banco_memoria
 
 ARQUIVOS_IMG = [f for f in os.listdir(".") if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))]
-ARQUIVO_LOGO[0] = ARQUIVOS_IMG[0] if ARQUIVOS_IMG else None
+ARQUIVO_LOGO = ARQUIVOS_IMG[0] if ARQUIVOS_IMG else None
 TEM_LOGO = ARQUIVO_LOGO is not None
 ICONE_PAGINA = ARQUIVO_LOGO if TEM_LOGO else ":material/auto_awesome:"
 
