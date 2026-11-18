@@ -42,7 +42,7 @@ if "usuario_logado" not in st.session_state:
         dados_usr = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=?", (usr_salvo,)).fetchone()
         conn.close()
         if dados_usr:
-            st.session_state.usuario_logado = {"usuario": dados_usr, "nome": dados_usr}
+            st.session_state.usuario_logado = {"usuario": dados_usr[0], "nome": dados_usr[1]}
 
 if "conversas" not in st.session_state:
     id_ini = str(uuid.uuid4())
@@ -113,7 +113,7 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     for modelo in modelos:
         try:
             resposta = client.chat.completions.create(model=modelo, messages=mensagens_formatadas, temperature=temperatura)
-            return resposta.choices.message.content
+            return resposta.choices[0].message.content
         except Exception as erro:
             ultimo_erro = str(erro)
             time.sleep(1)
@@ -205,7 +205,35 @@ if st.session_state.modo_tela != "chat":
         st.session_state.modo_tela = "chat"
         st.rerun()
 
-def tela_contas():
+if st.session_state.modo_tela == "chat":
+    conv = st.session_state.conversas[st.session_state.conversa_atual]
+    if st.session_state.usuario_logado and len(conv["mensagens"]) == 1:
+        st.caption("Sugestões completas desbloqueadas:")
+        c1, c2, c3, c4 = st.columns(4)
+        if c1.button("Me ajude a estudar", icon=":material/school:", use_container_width=True):
+            processar_envio_publico("Me ajude a estudar e resumir um assunto importante hoje!")
+            st.rerun()
+        if c2.button("Criar um código", icon=":material/code:", use_container_width=True):
+            processar_envio_publico("Quero ajuda para criar ou entender um código de programação.")
+            st.rerun()
+        if c3.button("Receita prática", icon=":material/restaurant:", use_container_width=True):
+            processar_envio_publico("Me sugira uma receita rápida, gostosa e fácil de fazer hoje!")
+            st.rerun()
+        if c4.button("Ideias criativas", icon=":material/lightbulb:", use_container_width=True):
+            processar_envio_publico("Preciso de ideias criativas para um projeto novo!")
+            st.rerun()
+    elif not st.session_state.usuario_logado:
+        st.caption("Você está na versão simplificada. Crie sua conta gratuita para liberar múltiplas conversas e comandos rápidos.")
+
+    for msg in conv["mensagens"]:
+        with st.chat_message(msg["role"], avatar=":material/memory:" if msg["role"] == "assistant" else ":material/person:"):
+            st.markdown(msg["content"])
+
+    if prompt_pub := st.chat_input("Pergunte à L.U.C.AI..."):
+        processar_envio_publico(prompt_pub)
+        st.rerun()
+
+elif st.session_state.modo_tela == "contas":
     st.subheader("Contas L.U.C.AI")
     if st.session_state.usuario_logado:
         st.success(f"Conectado como **{st.session_state.usuario_logado['nome']}** (`@{st.session_state.usuario_logado['usuario']}`).")
@@ -214,49 +242,46 @@ def tela_contas():
             st.query_params.clear()
             st.session_state.modo_tela = "chat"
             st.rerun()
-        return
-
-    aba_entrar, aba_criar = st.tabs(["Entrar na Conta", "Criar Conta Gratuita"])
-    with aba_entrar:
-        with st.form("form_login"):
-            u_login = st.text_input("Nome de usuário:")
-            s_login = st.text_input("Senha:", type="password")
-            if st.form_submit_button("Entrar", type="primary"):
-                conn = sqlite3.connect("memoria.db")
-                res = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=? AND senha=?", (u_login.strip(), s_login.strip())).fetchone()
-                conn.close()
-                if res:
-                    st.session_state.usuario_logado = {"usuario": res, "nome": res}
-                    st.query_params["sessao"] = res
-                    st.session_state.modo_tela = "chat"
-                    st.rerun()
-                else:
-                    st.error("Usuário ou senha incorretos.")
-
-    with aba_criar:
-        with st.form("form_cadastro"):
-            n_cad = st.text_input("Seu nome:")
-            u_cad = st.text_input("Escolha um usuário (sem espaços):")
-            s_cad = st.text_input("Crie uma senha:", type="password")
-            if st.form_submit_button("Criar Conta e Desbloquear v2.0", type="primary"):
-                if n_cad.strip() and u_cad.strip() and s_cad.strip():
-                    try:
-                        conn = sqlite3.connect("memoria.db")
-                        conn.execute("INSERT INTO usuarios VALUES (?, ?, ?)", (u_cad.strip(), s_cad.strip(), n_cad.strip()))
-                        conn.commit()
-                        conn.close()
-                        st.session_state.usuario_logado = {"usuario": u_cad.strip(), "nome": n_cad.strip()}
-                        st.query_params["sessao"] = u_cad.strip()
+    else:
+        aba_entrar, aba_criar = st.tabs(["Entrar na Conta", "Criar Conta Gratuita"])
+        with aba_entrar:
+            with st.form("form_login"):
+                u_login = st.text_input("Nome de usuário:")
+                s_login = st.text_input("Senha:", type="password")
+                if st.form_submit_button("Entrar", type="primary"):
+                    conn = sqlite3.connect("memoria.db")
+                    res = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=? AND senha=?", (u_login.strip(), s_login.strip())).fetchone()
+                    conn.close()
+                    if res:
+                        st.session_state.usuario_logado = {"usuario": res[0], "nome": res[1]}
+                        st.query_params["sessao"] = res[0]
                         st.session_state.modo_tela = "chat"
                         st.rerun()
-                    except sqlite3.IntegrityError:
-                        st.error("Esse nome de usuário já existe. Escolha outro.")
-                else:
-                    st.warning("Preencha todos os campos.")
+                    else:
+                        st.error("Usuário ou senha incorretos.")
+        with aba_criar:
+            with st.form("form_cadastro"):
+                n_cad = st.text_input("Seu nome:")
+                u_cad = st.text_input("Escolha um usuário (sem espaços):")
+                s_cad = st.text_input("Crie uma senha:", type="password")
+                if st.form_submit_button("Criar Conta e Desbloquear v2.0", type="primary"):
+                    if n_cad.strip() and u_cad.strip() and s_cad.strip():
+                        try:
+                            conn = sqlite3.connect("memoria.db")
+                            conn.execute("INSERT INTO usuarios VALUES (?, ?, ?)", (u_cad.strip(), s_cad.strip(), n_cad.strip()))
+                            conn.commit()
+                            conn.close()
+                            st.session_state.usuario_logado = {"usuario": u_cad.strip(), "nome": n_cad.strip()}
+                            st.query_params["sessao"] = u_cad.strip()
+                            st.session_state.modo_tela = "chat"
+                            st.rerun()
+                        except sqlite3.IntegrityError:
+                            st.error("Esse nome de usuário já existe. Escolha outro.")
+                    else:
+                        st.warning("Preencha todos os campos.")
 
-def tela_feedback():
+elif st.session_state.modo_tela == "feedback":
     st.subheader("Enviar Feedback para o Criador")
-    st.caption("Tem alguma sugestão de melhoria ou encontrou algum erro na L.U.C.AI v2.0? Escreva abaixo!")
     with st.form("form_feedback"):
         nome_padrao = st.session_state.usuario_logado["nome"] if st.session_state.usuario_logado else ""
         autor_fb = st.text_input("Seu nome (opcional):", value=nome_padrao)
@@ -264,3 +289,23 @@ def tela_feedback():
         if st.form_submit_button("Enviar Feedback", type="primary"):
             if msg_fb.strip():
                 conn = sqlite3.connect("memoria.db")
+                conn.execute("INSERT INTO feedbacks (autor, mensagem, data) VALUES (?, ?, ?)", (autor_fb.strip() or "Anônimo", msg_fb.strip(), obter_data_hora_atual()))
+                conn.commit()
+                conn.close()
+                st.success("Feedback enviado com sucesso!")
+            else:
+                st.warning("Escreva uma mensagem antes de enviar.")
+
+elif st.session_state.modo_tela == "ver_feedbacks":
+    st.subheader("Feedbacks Recebidos (Acesso Restrito)")
+    senha_fb = st.text_input("Código de acesso:", type="password", key="pwd_fb")
+    if senha_fb == SENHA_CRIADOR:
+        conn = sqlite3.connect("memoria.db")
+        lista_fb = conn.execute("SELECT id, autor, mensagem, data FROM feedbacks ORDER BY id DESC").fetchall()
+        conn.close()
+        if not lista_fb:
+            st.info("Nenhum feedback recebido ainda.")
+        for item in lista_fb:
+            st.markdown(f"**#{item[0]} • {item[1]}** *({item[3]})*")
+            st.info(item[2])
+    elif senha_fb != "":
