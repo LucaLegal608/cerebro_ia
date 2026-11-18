@@ -87,7 +87,36 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
             time.sleep(1.5)
             continue
 
-    return "⚠️ Muitas mensagens enviadas ao mesmo tempo! Aguarde 10 segundos e tente novamente."
+    return "def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
+    tempo_exato = obter_data_hora_atual()
+    sistema_completo = f"{instrucao_sistema}\n\n[DADO INTERNO SILENCIOSO - DATA E HORA ATUAL EM BRASÍLIA: {tempo_exato}. NUNCA imprima esse colchete na resposta. Use essa informação apenas se o usuário perguntar que dia é hoje ou que horas são.]"
+    mensagens_formatadas = [{"role": "system", "content": sistema_completo}]
+    for item in historico[-10:]:
+        mensagens_formatadas.append({"role": item["role"], "content": item["content"]})
+    mensagens_formatadas.append({"role": "user", "content": mensagem})
+
+    modelos_disponiveis = []
+    try:
+        for m in client.models.list().data:
+            if not any(x in m.id.lower() for x in ["whisper", "guard", "tts", "vision"]):
+                modelos_disponiveis.append(m.id)
+    except Exception as e:
+        return f"⚠️ Erro na chave da API: {e}"
+
+    modelos_disponiveis.sort(key=lambda x: ("llama-3.3" not in x and "70b" not in x and "120b" not in x, x))
+
+    ultimo_erro = ""
+    for modelo in modelos_disponiveis:
+        try:
+            resposta = client.chat.completions.create(model=modelo, messages=mensagens_formatadas, temperature=temperatura)
+            return resposta.choices[0].message.content
+        except Exception as erro:
+            ultimo_erro = str(erro)
+            time.sleep(1)
+            continue
+
+    return f"⚠️ Não foi possível responder agora. Detalhe técnico: {ultimo_erro}"
+"
 
 with st.sidebar:
     st.markdown(f"## 🤖 L.U.C.A IA `{VERSAO_IA}`")
