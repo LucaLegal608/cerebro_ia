@@ -11,7 +11,6 @@ import banco_memoria
 st.set_page_config(page_title="L.U.C.A IA (v2.0) — Lógica Unificada de Conhecimento e Ação", page_icon=":material/memory:", layout="wide", initial_sidebar_state="expanded")
 banco_memoria.iniciar_banco()
 
-# Inicializa tabelas extras de Contas e Feedbacks no banco de dados
 def iniciar_tabelas_v2():
     conn = sqlite3.connect("memoria.db")
     c = conn.cursor()
@@ -74,10 +73,10 @@ st.markdown("""
     .gemini-sigla { font-size: 1.05rem; color: #5F6368; font-weight: 500; margin-left: 8px; }
     .badge-v2 { background-color: #E0F7FA; color: #00838F; border: 1px solid #00E5FF; font-size: 0.78rem; font-weight: 700; padding: 3px 12px; border-radius: 999px; vertical-align: middle; margin-left: 10px; }
     .gemini-subtitle { color: #5F6368; font-size: 0.98rem; margin-top: 0.2rem; }
-    .stButton > button { border-radius: 14px !important; border: 1px solid #CBD5E1 !important; background-color: #F8FAFD !important; color: #1F1F1F !important; font-weight: 600 !important; transition: all 0.25s ease-in-out !important; }
-    .stButton > button:hover { background-color: #00E5FF !important; border-color: #00B8D4 !important; color: #002535 !important; box-shadow: 0 0 18px rgba(0, 229, 255, 0.85), 0 0 6px rgba(0, 229, 255, 0.6) !important; transform: translateY(-1px) !important; }
-    .stButton > button[kind="primary"] { background-color: #D3E3FD !important; border: 1px solid #90CAF9 !important; color: #041E49 !important; }
-    .stButton > button[kind="primary"]:hover { background-color: #00E5FF !important; border-color: #00B8D4 !important; color: #002535 !important; box-shadow: 0 0 20px rgba(0, 229, 255, 0.9) !important; }
+    .stButton > button, [data-testid="stFormSubmitButton"] > button { border-radius: 14px !important; border: 1px solid #CBD5E1 !important; background-color: #F8FAFD !important; color: #1F1F1F !important; font-weight: 600 !important; transition: all 0.25s ease-in-out !important; }
+    .stButton > button:hover, [data-testid="stFormSubmitButton"] > button:hover { background-color: #00E5FF !important; border-color: #00B8D4 !important; color: #002535 !important; box-shadow: 0 0 18px rgba(0, 229, 255, 0.85), 0 0 6px rgba(0, 229, 255, 0.6) !important; transform: translateY(-1px) !important; }
+    .stButton > button[kind="primary"], [data-testid="stFormSubmitButton"] > button[kind="primary"] { background-color: #D3E3FD !important; border: 1px solid #90CAF9 !important; color: #041E49 !important; }
+    .stButton > button[kind="primary"]:hover, [data-testid="stFormSubmitButton"] > button[kind="primary"]:hover { background-color: #00E5FF !important; border-color: #00B8D4 !important; color: #002535 !important; box-shadow: 0 0 20px rgba(0, 229, 255, 0.9) !important; }
     [data-testid="stChatMessage"] { background-color: #F8FAFD !important; border: 1px solid #E2E8F0 !important; border-radius: 18px !important; padding: 1rem 1.2rem !important; margin-bottom: 0.75rem !important; color: #1F1F1F !important; }
     [data-testid="stBottom"] { background-color: #FFFFFF !important; border-top: 1px solid #E2E8F0 !important; }
     [data-testid="stChatInput"] { border-radius: 24px !important; border: 2px solid #CBD5E1 !important; background-color: #F8FAFD !important; }
@@ -128,7 +127,6 @@ def processar_envio_publico(texto_usuario):
     inst = f"Você é a 'L.U.C.A IA' (Lógica Unificada de Conhecimento e Ação), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você está conversando com {nome_usr}. Fale EXCLUSIVAMENTE em Português do Brasil natural (nunca use português de Portugal). CONTEXTO DO CRIADOR (use só se perguntarem sobre o canal Luca Legal): {ler_dna_criador()}. MEMÓRIAS: {banco_memoria.buscar_todas_notas()}. Ajude com qualquer assunto do dia a dia de forma amigável e inteligente."
     conv["mensagens"].append({"role": "assistant", "content": gerar_resposta(texto_usuario, conv["mensagens"][:-1], inst, 0.7)})
 
-# BARRA LATERAL COM MENU DE TRÊS PONTINHOS (⋮)
 with st.sidebar:
     col_brand, col_menu = st.columns([0.78, 0.22])
     with col_brand:
@@ -187,7 +185,6 @@ with st.sidebar:
     st.caption(f"Status: Online • {VERSAO_IA}")
     st.caption("Criado por Luca de Brito Ferreira")
 
-# CABEÇALHO PRINCIPAL
 st.markdown(f"""
 <div class="gemini-header">
     <div class="chip-emblem">
@@ -205,7 +202,11 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- TELA 1: CHAT (VERSÃO COMPLETA PARA LOGADOS / SIMPLIFICADA PARA VISITANTES) ---
+if st.session_state.modo_tela != "chat":
+    if st.button("Voltar ao Chat", icon=":material/arrow_back:"):
+        st.session_state.modo_tela = "chat"
+        st.rerun()
+
 if st.session_state.modo_tela == "chat":
     conv = st.session_state.conversas[st.session_state.conversa_atual]
     if st.session_state.usuario_logado and len(conv["mensagens"]) == 1:
@@ -224,7 +225,7 @@ if st.session_state.modo_tela == "chat":
             processar_envio_publico("Preciso de ideias criativas para um projeto novo!")
             st.rerun()
     elif not st.session_state.usuario_logado:
-        st.caption("Você está na versão simplificada. Abra o menu **⋮** na barra lateral para criar sua conta gratuita e liberar múltiplas conversas e comandos rápidos.")
+        st.caption("Você está na versão simplificada. Crie sua conta gratuita para liberar múltiplas conversas e comandos rápidos.")
 
     for msg in conv["mensagens"]:
         with st.chat_message(msg["role"], avatar=":material/memory:" if msg["role"] == "assistant" else ":material/person:"):
@@ -234,11 +235,10 @@ if st.session_state.modo_tela == "chat":
         processar_envio_publico(prompt_pub)
         st.rerun()
 
-# --- TELA 2: CONTAS (LOGIN E CADASTRO) ---
 elif st.session_state.modo_tela == "contas":
     st.subheader("Contas L.U.C.A IA")
     if st.session_state.usuario_logado:
-        st.success(f"Você já está conectado como **{st.session_state.usuario_logado['nome']}** (`@{st.session_state.usuario_logado['usuario']}`).")
+        st.success(f"Você está conectado como **{st.session_state.usuario_logado['nome']}** (`@{st.session_state.usuario_logado['usuario']}`).")
         if st.button("Sair da Conta (Logout)", icon=":material/logout:"):
             st.session_state.usuario_logado = None
             st.session_state.modo_tela = "chat"
@@ -246,15 +246,16 @@ elif st.session_state.modo_tela == "contas":
     else:
         aba_entrar, aba_criar = st.tabs(["Entrar na Conta", "Criar Conta Gratuita"])
         with aba_entrar:
-            u_login = st.text_input("Nome de usuário:", key="u_log")
-            s_login = st.text_input("Senha:", type="password", key="s_log")
-            if st.button("Entrar", icon=":material/login:", type="primary"):
-                conn = sqlite3.connect("memoria.db")
-                res = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=? AND senha=?", (u_login.strip(), s_login.strip())).fetchone()
-                conn.close()
-                if res:
-                    st.session_state.usuario_logado = {"usuario": res[0], "nome": res[1]}
-                    st.session_state.modo_tela = "chat"
-                    st.rerun()
-                else:
-                    st.error("Usuário ou senha incorretos.")
+            with st.form("form_login"):
+                u_login = st.text_input("Nome de usuário:")
+                s_login = st.text_input("Senha:", type="password")
+                btn_logar = st.form_submit_button("Entrar", type="primary")
+                if btn_logar:
+                    conn = sqlite3.connect("memoria.db")
+                    res = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=? AND senha=?", (u_login.strip(), s_login.strip())).fetchone()
+                    conn.close()
+                    if res:
+                        st.session_state.usuario_logado = {"usuario": res[0], "nome": res[1]}
+                        st.session_state.modo_tela = "chat"
+                        st.rerun()
+                    else:
