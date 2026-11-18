@@ -19,8 +19,7 @@ def obter_data_hora_atual():
     fuso_brasilia = timezone(timedelta(hours=-3))
     agora = datetime.now(fuso_brasilia)
     dias_semana = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
-    dia_sem = dias_semana[agora.weekday()]
-    return agora.strftime(f"%d/%m/%Y às %H:%M ({dia_sem})")
+    return agora.strftime(f"%d/%m/%Y às %H:%M ({dias_semana[agora.weekday()]})")
 
 MENSAGEM_INICIAL = "Olá! 🤖 Eu sou a **L.U.C.A IA** (*Lógica Unificada de Conhecimento e Ação* — **BETA v1.0**). Fui feita para te ajudar com **qualquer coisa do dia a dia** — desde tirar dúvidas de estudos, escrever mensagens, organizar ideias e aprender coisas novas até bater um papo sobre qualquer assunto. O que você precisa resolver hoje? ⚡"
 
@@ -72,11 +71,9 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
 
     modelos_disponiveis = []
     try:
-        lista_modelos = client.models.list()
-        for m in lista_modelos.data:
-            nome = m.id
-            if not any(x in nome.lower() for x in ["whisper", "guard", "tts", "vision", "8b"]):
-                modelos_disponiveis.append(nome)
+        for m in client.models.list().data:
+            if not any(x in m.id.lower() for x in ["whisper", "guard", "tts", "vision", "8b"]):
+                modelos_disponiveis.append(m.id)
     except Exception as e:
         return f"⚠️ Erro de conexão com a chave da API: verifique sua chave no Secrets do Streamlit. ({e})"
 
@@ -92,12 +89,10 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
 
     return "⚠️ Muitas mensagens enviadas ao mesmo tempo! Aguarde 10 segundos e tente novamente."
 
-data_hora_agora = obter_data_hora_atual()
-
 with st.sidebar:
     st.markdown(f"## 🤖 L.U.C.A IA `{VERSAO_IA}`")
     st.caption("Lógica Unificada de Conhecimento e Ação")
-    st.caption(f"🕒 {data_hora_agora}")
+    st.caption(f"🕒 {obter_data_hora_atual()}")
     if st.button("➕ Nova Conversa", use_container_width=True, type="primary"):
         criar_nova_conversa()
         st.rerun()
@@ -106,8 +101,7 @@ with st.sidebar:
     for id_conv in reversed(list(st.session_state.conversas.keys())):
         dados_conv = st.session_state.conversas[id_conv]
         col_titulo, col_del = st.columns([0.82, 0.18])
-        eh_atual = (id_conv == st.session_state.conversa_atual)
-        icone_chat = "🔵" if eh_atual else "💬"
+        icone_chat = "🔵" if id_conv == st.session_state.conversa_atual else "💬"
         with col_titulo:
             if st.button(f"{icone_chat} {dados_conv['titulo']}", key=f"btn_{id_conv}", use_container_width=True):
                 st.session_state.conversa_atual = id_conv
@@ -134,42 +128,40 @@ aba_publica, aba_criador, aba_memoria = st.tabs(["💬 Chat Aberto (Público)", 
 with aba_publica:
     conv_ativa = st.session_state.conversas[st.session_state.conversa_atual]
     for msg in conv_ativa["mensagens"]:
-        avatar = "🤖" if msg["role"] == "assistant" else "👤"
-        with st.chat_message(msg["role"], avatar=avatar):
+        with st.chat_message(msg["role"], avatar="🤖" if msg["role"] == "assistant" else "👤"):
             st.markdown(msg["content"])
 
     if prompt_pub := st.chat_input("Pergunte ou peça ajuda com qualquer coisa...", key="in_pub"):
         if conv_ativa["titulo"] == "Nova conversa":
             conv_ativa["titulo"] = prompt_pub[:28] + ("..." if len(prompt_pub) > 28 else "")
         conv_ativa["mensagens"].append({"role": "user", "content": prompt_pub})
-        dna = ler_dna_criador()
-        memorias = banco_memoria.buscar_todas_notas()
-        instrucao_pub = f"Você é a 'L.U.C.A IA' (Lógica Unificada de Conhecimento e Ação), versão {VERSAO_IA} (em fase de desenvolvimento), criada por Luca de Brito Ferreira. IDIOMA OBRIGATÓRIO: Fale EXCLUSIVAMENTE em Português do Brasil natural, fluido e amigável (nunca use português de Portugal como 'oiça'). CONTEXTO DO CRIADOR (use apenas se perguntarem sobre o canal Luca Legal): {dna}. ATUALIZAÇÕES SALVAS: {memorias}. DIRETRIZES: 1) Ajude com absolutamente qualquer assunto do dia a dia de forma leve, direta e inteligente. 2) Nunca trate o visitante como dono do sistema. 3) Converse de forma humana e natural."
+        instrucao_pub = f"Você é a 'L.U.C.A IA' (Lógica Unificada de Conhecimento e Ação), versão {VERSAO_IA} (em fase de desenvolvimento), criada por Luca de Brito Ferreira. IDIOMA OBRIGATÓRIO: Fale EXCLUSIVAMENTE em Português do Brasil natural, fluido e amigável (nunca use português de Portugal como 'oiça'). CONTEXTO DO CRIADOR (use apenas se perguntarem sobre o canal Luca Legal): {ler_dna_criador()}. ATUALIZAÇÕES SALVAS: {banco_memoria.buscar_todas_notas()}. DIRETRIZES: 1) Ajude com absolutamente qualquer assunto do dia a dia de forma leve, direta e inteligente. 2) Nunca trate o visitante como dono do sistema. 3) Converse de forma humana e natural."
         resp = gerar_resposta(prompt_pub, conv_ativa["mensagens"][:-1], instrucao_pub, 0.7)
         conv_ativa["mensagens"].append({"role": "assistant", "content": resp})
         st.rerun()
 
 with aba_criador:
     senha_est = st.text_input("🔑 Código de acesso do criador:", type="password", key="pwd_est")
-    if senha_est != SENHA_CRIADOR and senha_est != "":
+    if senha_est != "" and senha_est != SENHA_CRIADOR:
         st.error("Acesso negado. Código incorreto.")
     if senha_est == SENHA_CRIADOR:
         st.success(f"Identidade confirmada, Luca! Modo estrategista ativado ({VERSAO_IA}).")
         if "hist_copiloto" not in st.session_state:
             st.session_state.hist_copiloto = []
         for msg in st.session_state.hist_copiloto:
-            avatar = "🎬" if msg["role"] == "assistant" else "🦸‍♂️"
-            with st.chat_message(msg["role"], avatar=avatar):
+            with st.chat_message(msg["role"], avatar="🎬" if msg["role"] == "assistant" else "🦸‍♂️"):
                 st.markdown(msg["content"])
         if prompt_yt := st.chat_input("Peça uma ideia de vídeo, título ou roteiro...", key="in_yt"):
             st.session_state.hist_copiloto.append({"role": "user", "content": prompt_yt})
-            dna = ler_dna_criador()
-            memorias = banco_memoria.buscar_todas_notas()
-            instrucao_yt = f"Você é a L.U.C.A IA ({VERSAO_IA}) operando em modo privado para o criador Luca Legal nos bastidores em Português do Brasil. Ajude a criar títulos de alto CTR, ganchos de 15s, roteiros virais e estratégias de engajamento. SEU DNA: {dna}. MEMÓRIAS SALVAS: {memorias}"
+            instrucao_yt = f"Você é a L.U.C.A IA ({VERSAO_IA}) operando em modo privado para o criador Luca Legal nos bastidores em Português do Brasil. Ajude a criar títulos de alto CTR, ganchos de 15s, roteiros virais e estratégias de engajamento. SEU DNA: {ler_dna_criador()}. MEMÓRIAS SALVAS: {banco_memoria.buscar_todas_notas()}"
             resp = gerar_resposta(prompt_yt, st.session_state.hist_copiloto[:-1], instrucao_yt, 0.8)
             st.session_state.hist_copiloto.append({"role": "assistant", "content": resp})
             st.rerun()
 
 with aba_memoria:
     senha_mem = st.text_input("🔑 Código de acesso para atualizar memória:", type="password", key="pwd_mem")
-    if senha_mem != SENHA_CRIADOR and senha_mem != "":
+    if senha_mem != "" and senha_mem != SENHA_CRIADOR:
+        st.error("Acesso negado. Código incorreto.")
+    if senha_mem == SENHA_CRIADOR:
+        st.caption(f"Insira novos dados no núcleo da L.U.C.A IA ({VERSAO_IA}).")
+        cat = st.selectbox("Categoria", ["Novidade", "Produto/Link", "Informação Geral", "Regra de Resposta"])
