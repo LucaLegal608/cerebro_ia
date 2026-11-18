@@ -8,7 +8,7 @@ from groq import Groq
 import streamlit as st
 import banco_memoria
 
-st.set_page_config(page_title="L.U.C.A IA (v2.0) — Lógica Unificada de Conhecimento e Ação", page_icon=":material/memory:", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="L.U.C.AI (v2.0) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="expanded")
 banco_memoria.iniciar_banco()
 
 def iniciar_tabelas_v2():
@@ -32,7 +32,7 @@ def obter_data_hora_atual():
     dias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.A IA** (*Lógica Unificada de Conhecimento e Ação* — **v2.0**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — estudos, ideias, textos, programação ou dúvidas gerais. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v2.0**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — estudos, ideias, textos, programação ou dúvidas gerais. Como posso ajudar hoje?"
 
 if "usuario_logado" not in st.session_state:
     st.session_state.usuario_logado = None
@@ -42,7 +42,7 @@ if "usuario_logado" not in st.session_state:
         dados_usr = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=?", (usr_salvo,)).fetchone()
         conn.close()
         if dados_usr:
-            st.session_state.usuario_logado = {"usuario": dados_usr[0], "nome": dados_usr[1]}
+            st.session_state.usuario_logado = {"usuario": dados_usr, "nome": dados_usr}
 
 if "conversas" not in st.session_state:
     id_ini = str(uuid.uuid4())
@@ -69,25 +69,19 @@ def excluir_conversa(id_conv):
 st.markdown("""
 <style>
     @import url('https://googleapis.com');
-    .stApp { background-color: #FFFFFF !important; color: #1F1F1F !important; font-family: 'Plus Jakarta Sans', sans-serif; }
-    header[data-testid="stHeader"] { background: transparent !important; }
-    #MainMenu, footer { visibility: hidden; }
-    section[data-testid="stSidebar"] { background-color: #F8FAFD !important; border-right: 1px solid #E2E8F0 !important; }
-    section[data-testid="stSidebar"] * { color: #1F1F1F !important; }
-    .gemini-header { display: flex; align-items: center; gap: 16px; padding: 0.8rem 0.5rem 1.2rem 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid #E2E8F0; }
-    .chip-emblem { width: 54px; height: 54px; border-radius: 16px; background: linear-gradient(135deg, #0F172A 0%, #0284C7 55%, #7C3AED 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(0, 229, 255, 0.35); flex-shrink: 0; }
+    .stApp { background-color: #FFFFFF; color: #1F1F1F; font-family: 'Plus Jakarta Sans', sans-serif; }
+    section[data-testid="stSidebar"] { background-color: #F8FAFD; border-right: 1px solid #E2E8F0; }
+    .gemini-header { display: flex; align-items: center; gap: 16px; padding: 0.6rem 0.5rem 1rem 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid #E2E8F0; }
+    .chip-emblem { width: 52px; height: 52px; border-radius: 16px; background: linear-gradient(135deg, #0F172A 0%, #0284C7 55%, #7C3AED 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(0, 229, 255, 0.35); flex-shrink: 0; }
     .gemini-title { font-size: 2.1rem; font-weight: 700; background: linear-gradient(90deg, #0F172A 0%, #00B4D8 55%, #7C3AED 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; margin: 0; line-height: 1.2; }
-    .gemini-sigla { font-size: 1.05rem; color: #5F6368; font-weight: 500; margin-left: 8px; }
+    .gemini-sigla { font-size: 1.02rem; color: #5F6368; font-weight: 500; margin-left: 8px; }
     .badge-v2 { background-color: #E0F7FA; color: #00838F; border: 1px solid #00E5FF; font-size: 0.78rem; font-weight: 700; padding: 3px 12px; border-radius: 999px; vertical-align: middle; margin-left: 10px; }
-    .gemini-subtitle { color: #5F6368; font-size: 0.98rem; margin-top: 0.2rem; }
-    .stButton > button, [data-testid="stFormSubmitButton"] > button { border-radius: 14px !important; border: 1px solid #CBD5E1 !important; background-color: #F8FAFD !important; color: #1F1F1F !important; font-weight: 600 !important; transition: all 0.25s ease-in-out !important; }
+    .gemini-subtitle { color: #5F6368; font-size: 0.96rem; margin-top: 0.2rem; }
+    .stButton > button, [data-testid="stFormSubmitButton"] > button { border-radius: 14px !important; border: 1px solid #CBD5E1 !important; background-color: #F8FAFD !important; color: #1F1F1F !important; font-weight: 600 !important; transition: all 0.2s ease-in-out !important; }
     .stButton > button:hover, [data-testid="stFormSubmitButton"] > button:hover { background-color: #00E5FF !important; border-color: #00B8D4 !important; color: #002535 !important; box-shadow: 0 0 18px rgba(0, 229, 255, 0.85), 0 0 6px rgba(0, 229, 255, 0.6) !important; transform: translateY(-1px) !important; }
     .stButton > button[kind="primary"], [data-testid="stFormSubmitButton"] > button[kind="primary"] { background-color: #D3E3FD !important; border: 1px solid #90CAF9 !important; color: #041E49 !important; }
     .stButton > button[kind="primary"]:hover, [data-testid="stFormSubmitButton"] > button[kind="primary"]:hover { background-color: #00E5FF !important; border-color: #00B8D4 !important; color: #002535 !important; box-shadow: 0 0 20px rgba(0, 229, 255, 0.9) !important; }
-    [data-testid="stChatMessage"] { background-color: #F8FAFD !important; border: 1px solid #E2E8F0 !important; border-radius: 18px !important; padding: 1rem 1.2rem !important; margin-bottom: 0.75rem !important; color: #1F1F1F !important; }
-    [data-testid="stBottom"] { background-color: #FFFFFF !important; border-top: 1px solid #E2E8F0 !important; }
-    [data-testid="stChatInput"] { border-radius: 24px !important; border: 2px solid #CBD5E1 !important; background-color: #F8FAFD !important; }
-    [data-testid="stChatInput"]:focus-within { border-color: #00E5FF !important; box-shadow: 0 0 14px rgba(0, 229, 255, 0.45) !important; }
+    [data-testid="stChatMessage"] { background-color: #F8FAFD; border: 1px solid #E2E8F0; border-radius: 18px; padding: 1rem 1.2rem; margin-bottom: 0.75rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -119,7 +113,7 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     for modelo in modelos:
         try:
             resposta = client.chat.completions.create(model=modelo, messages=mensagens_formatadas, temperature=temperatura)
-            return resposta.choices[0].message.content
+            return resposta.choices.message.content
         except Exception as erro:
             ultimo_erro = str(erro)
             time.sleep(1)
@@ -131,42 +125,16 @@ def processar_envio_publico(texto_usuario):
         conv["titulo"] = texto_usuario[:26] + ("..." if len(texto_usuario) > 26 else "")
     conv["mensagens"].append({"role": "user", "content": texto_usuario})
     nome_usr = st.session_state.usuario_logado["nome"] if st.session_state.usuario_logado else "Visitante"
-    inst = f"Você é a 'L.U.C.A IA' (Lógica Unificada de Conhecimento e Ação), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você está conversando com {nome_usr}. Fale EXCLUSIVAMENTE em Português do Brasil natural (nunca use português de Portugal). CONTEXTO DO CRIADOR (use só se perguntarem sobre o canal Luca Legal): {ler_dna_criador()}. MEMÓRIAS: {banco_memoria.buscar_todas_notas()}. Ajude com qualquer assunto do dia a dia de forma amigável e inteligente."
+    inst = f"Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você está conversando com {nome_usr}. Fale EXCLUSIVAMENTE em Português do Brasil natural (nunca use português de Portugal). CONTEXTO DO CRIADOR (use só se perguntarem sobre o canal Luca Legal): {ler_dna_criador()}. MEMÓRIAS: {banco_memoria.buscar_todas_notas()}. Ajude com qualquer assunto do dia a dia de forma amigável e inteligente."
     conv["mensagens"].append({"role": "assistant", "content": gerar_resposta(texto_usuario, conv["mensagens"][:-1], inst, 0.7)})
 
 with st.sidebar:
-    col_brand, col_menu = st.columns([0.78, 0.22])
-    with col_brand:
-        st.markdown("### :material/memory: L.U.C.A IA")
-    with col_menu:
-        with st.popover("⋮", help="Mais opções, Contas e Feedback"):
-            st.markdown("##### Menu L.U.C.A IA")
-            if st.button("Chat Principal", icon=":material/chat:", use_container_width=True):
-                st.session_state.modo_tela = "chat"
-                st.rerun()
-            if st.button("Contas (Login)", icon=":material/account_circle:", use_container_width=True):
-                st.session_state.modo_tela = "contas"
-                st.rerun()
-            if st.button("Enviar Feedback", icon=":material/rate_review:", use_container_width=True):
-                st.session_state.modo_tela = "feedback"
-                st.rerun()
-            st.divider()
-            st.caption("Área Restrita (Criador)")
-            if st.button("Estúdio do Criador", icon=":material/movie_edit:", use_container_width=True):
-                st.session_state.modo_tela = "estudio"
-                st.rerun()
-            if st.button("Banco de Dados", icon=":material/database:", use_container_width=True):
-                st.session_state.modo_tela = "memoria"
-                st.rerun()
-            if st.button("Ler Feedbacks", icon=":material/inbox:", use_container_width=True):
-                st.session_state.modo_tela = "ver_feedbacks"
-                st.rerun()
-
-    st.caption("Lógica Unificada de Conhecimento e Ação")
+    st.markdown("### :material/memory: L.U.C.AI")
+    st.caption("Lógica Unificada de Conhecimento e Ação Inteligente")
     st.caption(f":material/schedule: {obter_data_hora_atual()}")
 
     if st.session_state.usuario_logado:
-        st.success(f"Logado como: **{st.session_state.usuario_logado['nome']}**")
+        st.success(f"Conectado: **{st.session_state.usuario_logado['nome']}**")
         if st.button("Nova conversa", icon=":material/add_comment:", use_container_width=True, type="primary"):
             criar_nova_conversa()
             st.rerun()
@@ -184,8 +152,31 @@ with st.sidebar:
                 st.rerun()
     else:
         st.info("Modo Visitante (Simplificado)")
-        if st.button("Fazer Login / Criar Conta", icon=":material/login:", use_container_width=True, type="primary"):
+        if st.button("Entrar / Criar Conta", icon=":material/login:", use_container_width=True, type="primary"):
             st.session_state.modo_tela = "contas"
+            st.rerun()
+
+    st.divider()
+    with st.expander("⋮ Mais opções (Contas, Feedback e Criador)"):
+        if st.button("Chat Principal", icon=":material/chat:", use_container_width=True):
+            st.session_state.modo_tela = "chat"
+            st.rerun()
+        if st.button("Contas (Login)", icon=":material/account_circle:", use_container_width=True):
+            st.session_state.modo_tela = "contas"
+            st.rerun()
+        if st.button("Enviar Feedback", icon=":material/rate_review:", use_container_width=True):
+            st.session_state.modo_tela = "feedback"
+            st.rerun()
+        st.divider()
+        st.caption("Área Restrita (Criador)")
+        if st.button("Estúdio do Criador", icon=":material/movie_edit:", use_container_width=True):
+            st.session_state.modo_tela = "estudio"
+            st.rerun()
+        if st.button("Banco de Dados", icon=":material/database:", use_container_width=True):
+            st.session_state.modo_tela = "memoria"
+            st.rerun()
+        if st.button("Ler Feedbacks", icon=":material/inbox:", use_container_width=True):
+            st.session_state.modo_tela = "ver_feedbacks"
             st.rerun()
 
     st.divider()
@@ -203,7 +194,7 @@ st.markdown(f"""
         </svg>
     </div>
     <div>
-        <div><span class="gemini-title">L.U.C.A IA</span><span class="gemini-sigla">— Lógica Unificada de Conhecimento e Ação</span><span class="badge-v2">{VERSAO_IA}</span></div>
+        <div><span class="gemini-title">L.U.C.AI</span><span class="gemini-sigla">— Lógica Unificada de Conhecimento e Ação Inteligente</span><span class="badge-v2">{VERSAO_IA}</span></div>
         <div class="gemini-subtitle">Sua assistente inteligente para ajudar com qualquer coisa do dia a dia.</div>
     </div>
 </div>
@@ -215,7 +206,7 @@ if st.session_state.modo_tela != "chat":
         st.rerun()
 
 def tela_contas():
-    st.subheader("Contas L.U.C.A IA")
+    st.subheader("Contas L.U.C.AI")
     if st.session_state.usuario_logado:
         st.success(f"Conectado como **{st.session_state.usuario_logado['nome']}** (`@{st.session_state.usuario_logado['usuario']}`).")
         if st.button("Sair da Conta (Logout)", icon=":material/logout:"):
@@ -235,8 +226,8 @@ def tela_contas():
                 res = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=? AND senha=?", (u_login.strip(), s_login.strip())).fetchone()
                 conn.close()
                 if res:
-                    st.session_state.usuario_logado = {"usuario": res[0], "nome": res[1]}
-                    st.query_params["sessao"] = res[0]
+                    st.session_state.usuario_logado = {"usuario": res, "nome": res}
+                    st.query_params["sessao"] = res
                     st.session_state.modo_tela = "chat"
                     st.rerun()
                 else:
@@ -265,8 +256,11 @@ def tela_contas():
 
 def tela_feedback():
     st.subheader("Enviar Feedback para o Criador")
-    st.caption("Tem alguma sugestão de melhoria ou encontrou algum erro na L.U.C.A IA v2.0? Escreva abaixo!")
+    st.caption("Tem alguma sugestão de melhoria ou encontrou algum erro na L.U.C.AI v2.0? Escreva abaixo!")
     with st.form("form_feedback"):
         nome_padrao = st.session_state.usuario_logado["nome"] if st.session_state.usuario_logado else ""
         autor_fb = st.text_input("Seu nome (opcional):", value=nome_padrao)
         msg_fb = st.text_area("Sua mensagem ou sugestão:")
+        if st.form_submit_button("Enviar Feedback", type="primary"):
+            if msg_fb.strip():
+                conn = sqlite3.connect("memoria.db")
