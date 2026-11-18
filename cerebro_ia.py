@@ -36,6 +36,13 @@ MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.A IA** (*Lógica Unificada de Conheci
 
 if "usuario_logado" not in st.session_state:
     st.session_state.usuario_logado = None
+    if "sessao" in st.query_params:
+        usr_salvo = st.query_params["sessao"]
+        conn = sqlite3.connect("memoria.db")
+        dados_usr = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=?", (usr_salvo,)).fetchone()
+        conn.close()
+        if dados_usr:
+            st.session_state.usuario_logado = {"usuario": dados_usr[0], "nome": dados_usr[1]}
 
 if "conversas" not in st.session_state:
     id_ini = str(uuid.uuid4())
@@ -207,40 +214,13 @@ if st.session_state.modo_tela != "chat":
         st.session_state.modo_tela = "chat"
         st.rerun()
 
-if st.session_state.modo_tela == "chat":
-    conv = st.session_state.conversas[st.session_state.conversa_atual]
-    if st.session_state.usuario_logado and len(conv["mensagens"]) == 1:
-        st.caption("Sugestões completas desbloqueadas:")
-        c1, c2, c3, c4 = st.columns(4)
-        if c1.button("Me ajude a estudar", icon=":material/school:", use_container_width=True):
-            processar_envio_publico("Me ajude a estudar e resumir um assunto importante hoje!")
-            st.rerun()
-        if c2.button("Criar um código", icon=":material/code:", use_container_width=True):
-            processar_envio_publico("Quero ajuda para criar ou entender um código de programação.")
-            st.rerun()
-        if c3.button("Receita prática", icon=":material/restaurant:", use_container_width=True):
-            processar_envio_publico("Me sugira uma receita rápida, gostosa e fácil de fazer hoje!")
-            st.rerun()
-        if c4.button("Ideias criativas", icon=":material/lightbulb:", use_container_width=True):
-            processar_envio_publico("Preciso de ideias criativas para um projeto novo!")
-            st.rerun()
-    elif not st.session_state.usuario_logado:
-        st.caption("Você está na versão simplificada. Crie sua conta gratuita para liberar múltiplas conversas e comandos rápidos.")
-
-    for msg in conv["mensagens"]:
-        with st.chat_message(msg["role"], avatar=":material/memory:" if msg["role"] == "assistant" else ":material/person:"):
-            st.markdown(msg["content"])
-
-    if prompt_pub := st.chat_input("Pergunte à L.U.C.A IA..."):
-        processar_envio_publico(prompt_pub)
-        st.rerun()
-
 def tela_contas():
     st.subheader("Contas L.U.C.A IA")
     if st.session_state.usuario_logado:
         st.success(f"Conectado como **{st.session_state.usuario_logado['nome']}** (`@{st.session_state.usuario_logado['usuario']}`).")
         if st.button("Sair da Conta (Logout)", icon=":material/logout:"):
             st.session_state.usuario_logado = None
+            st.query_params.clear()
             st.session_state.modo_tela = "chat"
             st.rerun()
         return
@@ -256,6 +236,7 @@ def tela_contas():
                 conn.close()
                 if res:
                     st.session_state.usuario_logado = {"usuario": res[0], "nome": res[1]}
+                    st.query_params["sessao"] = res[0]
                     st.session_state.modo_tela = "chat"
                     st.rerun()
                 else:
@@ -274,6 +255,7 @@ def tela_contas():
                         conn.commit()
                         conn.close()
                         st.session_state.usuario_logado = {"usuario": u_cad.strip(), "nome": n_cad.strip()}
+                        st.query_params["sessao"] = u_cad.strip()
                         st.session_state.modo_tela = "chat"
                         st.rerun()
                     except sqlite3.IntegrityError:
@@ -288,79 +270,3 @@ def tela_feedback():
         nome_padrao = st.session_state.usuario_logado["nome"] if st.session_state.usuario_logado else ""
         autor_fb = st.text_input("Seu nome (opcional):", value=nome_padrao)
         msg_fb = st.text_area("Sua mensagem ou sugestão:")
-        if st.form_submit_button("Enviar Feedback", type="primary"):
-            if msg_fb.strip():
-                conn = sqlite3.connect("memoria.db")
-                conn.execute("INSERT INTO feedbacks (autor, mensagem, data) VALUES (?, ?, ?)", (autor_fb.strip() or "Anônimo", msg_fb.strip(), obter_data_hora_atual()))
-                conn.commit()
-                conn.close()
-                st.success("Feedback enviado com sucesso! Obrigado por ajudar a melhorar a L.U.C.A IA.")
-            else:
-                st.warning("Escreva uma mensagem antes de enviar.")
-
-def tela_ver_feedbacks():
-    st.subheader("Feedbacks Recebidos (Acesso Restrito)")
-    senha_fb = st.text_input("Código de acesso:", type="password", key="pwd_fb")
-    if senha_fb != "" and senha_fb != SENHA_CRIADOR:
-        st.error("Código incorreto.")
-    if senha_fb == SENHA_CRIADOR:
-        conn = sqlite3.connect("memoria.db")
-        lista_fb = conn.execute("SELECT id, autor, mensagem, data FROM feedbacks ORDER BY id DESC").fetchall()
-        conn.close()
-        if not lista_fb:
-            st.info("Nenhum feedback recebido ainda.")
-        for item in lista_fb:
-            st.markdown(f"**#{item[0]} • {item[1]}** *({item[3]})*")
-            st.info(item[2])
-
-def tela_estudio():
-    st.subheader("Estúdio do Criador (Acesso Restrito)")
-    senha_est = st.text_input("Código de acesso:", type="password", key="pwd_est")
-    if senha_est != "" and senha_est != SENHA_CRIADOR:
-        st.error("Código incorreto.")
-    if senha_est == SENHA_CRIADOR:
-        st.success("Acesso autorizado, Luca! Peça para eu 'salvar na memória' qualquer novidade.")
-        if "hist_copiloto" not in st.session_state:
-            st.session_state.hist_copiloto = []
-        for msg in st.session_state.hist_copiloto:
-            with st.chat_message(msg["role"], avatar=":material/movie_edit:" if msg["role"] == "assistant" else ":material/person:"):
-                st.markdown(msg["content"])
-        if prompt_yt := st.chat_input("Peça roteiros ou atualize a memória por conversa...", key="in_yt"):
-            st.session_state.hist_copiloto.append({"role": "user", "content": prompt_yt})
-            inst_yt = f"Você é a L.U.C.A IA ({VERSAO_IA}) operando para o criador Luca Legal em Português do Brasil. Sempre que o Luca pedir para lembrar/salvar algo no banco de dados/memória, inclua no final: [SALVAR_MEMORIA: texto resumido]. DNA: {ler_dna_criador()}. MEMÓRIAS: {banco_memoria.buscar_todas_notas()}"
-            resp = gerar_resposta(prompt_yt, st.session_state.hist_copiloto[:-1], inst_yt, 0.7)
-            match = re.search(r"\[SALVAR_MEMORIA:\s*(.*?)\]", resp, re.DOTALL)
-            if match:
-                txt = match.group(1).strip()
-                banco_memoria.salvar_nota("Atualização via Chat", txt)
-                resp = re.sub(r"\[SALVAR_MEMORIA:.*?\]", "", resp, flags=re.DOTALL).strip() + f"\n\n*Salvo na memória:* `{txt}`"
-            st.session_state.hist_copiloto.append({"role": "assistant", "content": resp})
-            st.rerun()
-
-def tela_memoria():
-    st.subheader("Banco de Dados (Acesso Restrito)")
-    senha_mem = st.text_input("Código de acesso:", type="password", key="pwd_mem")
-    if senha_mem != "" and senha_mem != SENHA_CRIADOR:
-        st.error("Código incorreto.")
-    if senha_mem == SENHA_CRIADOR:
-        cat = st.selectbox("Categoria", ["Novidade", "Produto/Link", "Informação Geral", "Regra de Resposta"])
-        nota = st.text_area("O que a L.U.C.A IA deve memorizar?")
-        if st.button("Salvar Manualmente", icon=":material/save:", type="primary"):
-            if nota.strip():
-                banco_memoria.salvar_nota(cat, nota)
-                st.success("Salvo com sucesso!")
-                st.rerun()
-        st.divider()
-        st.info(banco_memoria.buscar_todas_notas() or "Nenhuma memória extra salva.")
-
-if st.session_state.modo_tela == "contas":
-    tela_contas()
-elif st.session_state.modo_tela == "feedback":
-    tela_feedback()
-elif st.session_state.modo_tela == "ver_feedbacks":
-    tela_ver_feedbacks()
-elif st.session_state.modo_tela == "estudio":
-    tela_estudio()
-elif st.session_state.modo_tela == "memoria":
-    tela_memoria()
-
