@@ -7,10 +7,26 @@ from groq import Groq
 import streamlit as st
 import banco_memoria
 
+from PIL import Image, ImageChops
+
 ARQUIVOS_IMG = [f for f in os.listdir(".") if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))]
-ARQUIVO_LOGO = ARQUIVOS_IMG[0] if ARQUIVOS_IMG else None
+ARQUIVO_LOGO = None
+if ARQUIVOS_IMG:
+    img = Image.open(ARQUIVOS_IMG).convert("RGBA")
+    fundo = Image.new("RGBA", img.size, (255, 255, 255, 255))
+    diff = ImageChops.difference(img.convert("RGB"), fundo.convert("RGB"))
+    caixa = diff.getbbox()
+    if caixa:
+        img = img.crop(caixa)
+    # Pega apenas a metade superior (o símbolo da rede neural com raio) para ficar grande e nítido
+    largura, altura = img.size
+    img_simbolo = img.crop((0, 0, largura, int(altura * 0.68)))
+    img_simbolo.save("logo_recortada.png")
+    ARQUIVO_LOGO = "logo_recortada.png"
+
 TEM_LOGO = ARQUIVO_LOGO is not None
 ICONE_PAGINA = ARQUIVO_LOGO if TEM_LOGO else ":material/auto_awesome:"
+
 
 st.set_page_config(page_title="L.U.C.A IA (BETA v1.6) — Lógica Unificada de Conhecimento e Ação", page_icon=ICONE_PAGINA, layout="wide", initial_sidebar_state="expanded")
 banco_memoria.iniciar_banco()
