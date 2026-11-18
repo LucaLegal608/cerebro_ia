@@ -7,21 +7,24 @@ from groq import Groq
 import streamlit as st
 import banco_memoria
 
-st.set_page_config(page_title="L.U.C.A IA (BETA v1.5) — Lógica Unificada de Conhecimento e Ação", page_icon=":material/auto_awesome:", layout="wide", initial_sidebar_state="expanded")
+TEM_LOGO = os.path.exists("logo.png")
+ICONE_PAGINA = "logo.png" if TEM_LOGO else ":material/auto_awesome:"
+
+st.set_page_config(page_title="L.U.C.A IA (BETA v1.6) — Lógica Unificada de Conhecimento e Ação", page_icon=ICONE_PAGINA, layout="wide", initial_sidebar_state="expanded")
 banco_memoria.iniciar_banco()
 
 CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 SENHA_CRIADOR = "947298688"
-VERSAO_IA = "BETA • v1.5"
+VERSAO_IA = "BETA • v1.6"
 
 def obter_data_hora_atual():
     agora = datetime.now(timezone(timedelta(hours=-3)))
     dias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.A IA** (*Lógica Unificada de Conhecimento e Ação* — **BETA v1.5**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — estudos, ideias, textos, programação ou dúvidas gerais. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.A IA** (*Lógica Unificada de Conhecimento e Ação* — **BETA v1.6**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — estudos, ideias, textos, programação ou dúvidas gerais. Como posso ajudar hoje?"
 
 if "conversas" not in st.session_state:
     id_ini = str(uuid.uuid4())
@@ -53,11 +56,10 @@ st.markdown("""
     #MainMenu, footer { visibility: hidden; }
     section[data-testid="stSidebar"] { background-color: #F8FAFD !important; border-right: 1px solid #E2E8F0 !important; }
     section[data-testid="stSidebar"] * { color: #1F1F1F !important; }
-    .gemini-header { padding: 1rem 0.5rem 0.8rem 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid #E2E8F0; }
-    .gemini-title { font-size: 2.1rem; font-weight: 700; background: linear-gradient(90deg, #1A73E8 0%, #00B4D8 40%, #9B72CB 75%, #D96570 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; margin: 0; }
+    .gemini-title { font-size: 2.1rem; font-weight: 700; background: linear-gradient(90deg, #1E293B 0%, #00B4D8 55%, #8B5CF6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; margin: 0; }
     .gemini-sigla { font-size: 1.05rem; color: #5F6368; font-weight: 500; margin-left: 8px; }
     .badge-gemini { background-color: #E0F7FA; color: #00838F; border: 1px solid #00E5FF; font-size: 0.75rem; font-weight: 700; padding: 3px 12px; border-radius: 999px; vertical-align: middle; margin-left: 10px; }
-    .gemini-subtitle { color: #5F6368; font-size: 0.98rem; margin-top: 0.3rem; }
+    .gemini-subtitle { color: #5F6368; font-size: 0.98rem; margin-top: 0.25rem; }
     .stButton > button { border-radius: 14px !important; border: 1px solid #CBD5E1 !important; background-color: #F8FAFD !important; color: #1F1F1F !important; font-weight: 600 !important; transition: all 0.25s ease-in-out !important; }
     .stButton > button:hover { background-color: #00E5FF !important; border-color: #00B8D4 !important; color: #002535 !important; box-shadow: 0 0 18px rgba(0, 229, 255, 0.85), 0 0 6px rgba(0, 229, 255, 0.6) !important; transform: translateY(-1px) !important; }
     .stButton > button[kind="primary"] { background-color: #D3E3FD !important; border: 1px solid #90CAF9 !important; color: #041E49 !important; }
@@ -96,7 +98,7 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     for modelo in modelos:
         try:
             resposta = client.chat.completions.create(model=modelo, messages=mensagens_formatadas, temperature=temperatura)
-            return resposta.choices.message.content
+            return resposta.choices[0].message.content
         except Exception as erro:
             ultimo_erro = str(erro)
             time.sleep(1)
@@ -111,7 +113,10 @@ def processar_envio_publico(texto_usuario):
     conv["mensagens"].append({"role": "assistant", "content": gerar_resposta(texto_usuario, conv["mensagens"][:-1], inst, 0.7)})
 
 with st.sidebar:
-    st.markdown("### :material/auto_awesome: L.U.C.A IA")
+    if TEM_LOGO:
+        st.image("logo.png", width=180)
+    else:
+        st.markdown("### :material/auto_awesome: L.U.C.A IA")
     st.caption("Lógica Unificada de Conhecimento e Ação")
     st.caption(f":material/schedule: {obter_data_hora_atual()}")
     if st.button("Nova conversa", icon=":material/add_comment:", use_container_width=True, type="primary"):
@@ -148,7 +153,15 @@ with st.sidebar:
     st.caption("Criado por Luca de Brito Ferreira")
     st.caption("Esta IA está em fase de desenvolvimento.")
 
-st.markdown(f"<div class='gemini-header'><div><span class='gemini-title'>L.U.C.A IA</span><span class='gemini-sigla'>— Lógica Unificada de Conhecimento e Ação</span><span class='badge-gemini'>{VERSAO_IA}</span></div><div class='gemini-subtitle'>Sua assistente inteligente para ajudar com qualquer coisa do dia a dia.</div></div>", unsafe_allow_html=True)
+col_logo, col_txt = st.columns([0.12, 0.88])
+with col_logo:
+    if TEM_LOGO:
+        st.image("logo.png", width=85)
+with col_txt:
+    st.markdown(f"<div><span class='gemini-title'>L.U.C.A IA</span><span class='gemini-sigla'>— Lógica Unificada de Conhecimento e Ação</span><span class='badge-gemini'>{VERSAO_IA}</span></div><div class='gemini-subtitle'>Sua assistente inteligente para ajudar com qualquer coisa do dia a dia.</div>", unsafe_allow_html=True)
+st.divider()
+
+avatar_ia = "logo.png" if TEM_LOGO else ":material/auto_awesome:"
 
 if st.session_state.modo_tela == "chat":
     conv = st.session_state.conversas[st.session_state.conversa_atual]
@@ -169,7 +182,7 @@ if st.session_state.modo_tela == "chat":
             st.rerun()
 
     for msg in conv["mensagens"]:
-        with st.chat_message(msg["role"], avatar=":material/auto_awesome:" if msg["role"] == "assistant" else ":material/person:"):
+        with st.chat_message(msg["role"], avatar=avatar_ia if msg["role"] == "assistant" else ":material/person:"):
             st.markdown(msg["content"])
 
     if prompt_pub := st.chat_input("Pergunte à L.U.C.A IA..."):
@@ -186,7 +199,7 @@ elif st.session_state.modo_tela == "estudio":
         if "hist_copiloto" not in st.session_state:
             st.session_state.hist_copiloto = []
         for msg in st.session_state.hist_copiloto:
-            with st.chat_message(msg["role"], avatar=":material/movie_edit:" if msg["role"] == "assistant" else ":material/person:"):
+            with st.chat_message(msg["role"], avatar=avatar_ia if msg["role"] == "assistant" else ":material/person:"):
                 st.markdown(msg["content"])
         if prompt_yt := st.chat_input("Peça roteiros ou atualize a memória por conversa...", key="in_yt"):
             st.session_state.hist_copiloto.append({"role": "user", "content": prompt_yt})
