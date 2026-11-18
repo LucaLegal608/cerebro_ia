@@ -308,8 +308,7 @@ elif st.session_state.modo_tela == "ver_feedbacks":
         for item in lista_fb:
             st.markdown(f"**#{item[0]} • {item[1]}** *({item[3]})*")
             st.info(item[2])
-                 if senha_fb != "" and senha_fb != SENHA_CRIADOR:
-        st.error("Código incorreto.")
+                
 
 elif st.session_state.modo_tela == "estudio":
     st.subheader("Estúdio do Criador (Acesso Restrito)")
