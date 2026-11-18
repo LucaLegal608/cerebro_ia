@@ -8,8 +8,8 @@ import streamlit as st
 import banco_memoria
 
 st.set_page_config(
-    page_title="L.U.C.A IA (BETA v1.2) — Lógica Unificada de Conhecimento e Ação",
-    page_icon="🤖",
+    page_title="L.U.C.A IA (BETA v1.3) — Lógica Unificada de Conhecimento e Ação",
+    page_icon="✨",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -19,7 +19,7 @@ CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 SENHA_CRIADOR = "947298688"
-VERSAO_IA = "BETA • v1.2"
+VERSAO_IA = "BETA • v1.3"
 
 def obter_data_hora_atual():
     fuso_brasilia = timezone(timedelta(hours=-3))
@@ -27,7 +27,7 @@ def obter_data_hora_atual():
     dias_semana = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias_semana[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Sistemas inicializados! 🤖⚡ Eu sou a **L.U.C.A IA** (*Lógica Unificada de Conhecimento e Ação* — **BETA v1.2**). Estou online para ajudar com **qualquer tarefa do seu dia a dia** — estudos, programação, ideias criativas, receitas ou qualquer dúvida. Como posso ajudar agora?"
+MENSAGEM_INICIAL = "Olá! ✨ Eu sou a **L.U.C.A IA** (*Lógica Unificada de Conhecimento e Ação* — **BETA v1.3**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — estudos, ideias, textos, programação ou dúvidas gerais. Como posso ajudar hoje?"
 
 if "conversas" not in st.session_state:
     id_inicial = str(uuid.uuid4())
@@ -47,114 +47,113 @@ def excluir_conversa(id_conv):
     else:
         st.session_state.conversas[id_conv] = {"titulo": "Nova conversa", "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]}
 
-# CSS AVANÇADO: TEMA FUTURISTA / CYBERPUNK NEON
+# CSS AVANÇADO: ESTILO GEMINI / CHATGPT MINIMALISTA CLARO
 st.markdown("""
 <style>
     @import url('https://googleapis.com');
 
-    /* Fundo principal estilo espaço profundo */
+    /* Fundo principal claro e limpo */
     .stApp {
-        background: radial-gradient(circle at top right, #0B192C 0%, #050811 60%, #020408 100%);
-        color: #E2E8F0;
-        font-family: 'Inter', sans-serif;
+        background-color: #FFFFFF !important;
+        color: #1F1F1F !important;
+        font-family: 'Plus Jakarta Sans', sans-serif;
     }
 
-    /* Esconde barra superior padrão do Streamlit */
+    /* Esconde menus técnicos do Streamlit */
     header[data-testid="stHeader"] {
         background: transparent !important;
     }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    /* Barra lateral futurista */
+    /* Barra lateral suave estilo Gemini */
     section[data-testid="stSidebar"] {
-        background-color: rgba(8, 14, 28, 0.92) !important;
-        border-right: 1px solid rgba(0, 243, 255, 0.25);
-        box-shadow: 4px 0 25px rgba(0, 243, 255, 0.05);
+        background-color: #F8FAFD !important;
+        border-right: 1px solid #E2E8F0 !important;
+    }
+    section[data-testid="stSidebar"] * {
+        color: #1F1F1F !important;
     }
 
-    /* Banner Principal Cyberpunk */
-    .cyber-banner {
-        background: linear-gradient(135deg, rgba(13, 25, 48, 0.85) 0%, rgba(28, 16, 56, 0.85) 100%);
-        backdrop-filter: blur(12px);
-        padding: 1.8rem 2rem;
-        border-radius: 16px;
-        border: 1px solid rgba(0, 243, 255, 0.45);
-        box-shadow: 0 0 25px rgba(0, 243, 255, 0.15), inset 0 0 15px rgba(157, 78, 221, 0.15);
-        margin-bottom: 1.5rem;
+    /* Cabeçalho Minimalista Estilo Gemini */
+    .gemini-header {
+        padding: 1.2rem 0.5rem 1rem 0.5rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #F1F5F9;
     }
-    .cyber-title {
-        font-family: 'Orbitron', sans-serif;
-        font-size: 2rem;
-        font-weight: 800;
-        background: linear-gradient(90deg, #00F3FF 0%, #7B2CBF 100%);
+    .gemini-title {
+        font-size: 2.1rem;
+        font-weight: 700;
+        background: linear-gradient(90deg, #1A73E8 0%, #8AB4F8 35%, #9B72CB 70%, #D96570 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin: 0;
-        letter-spacing: 1px;
-    }
-    .cyber-sub {
-        color: #38BDF8;
-        font-size: 1rem;
-        font-weight: 600;
-        margin-top: 4px;
-        letter-spacing: 0.5px;
-    }
-    .badge-neon {
         display: inline-block;
-        background: rgba(0, 243, 255, 0.12);
-        border: 1px solid #00F3FF;
-        color: #00F3FF;
-        font-family: 'Orbitron', sans-serif;
-        font-size: 0.72rem;
-        font-weight: 700;
-        padding: 3px 10px;
-        border-radius: 999px;
-        box-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
-        margin-left: 10px;
-        vertical-align: middle;
+        margin: 0;
+        letter-spacing: -0.5px;
     }
-    .cyber-desc {
-        color: #CBD5E1;
-        margin-top: 0.7rem;
-        font-size: 0.98rem;
+    .gemini-sigla {
+        font-size: 1.05rem;
+        color: #5F6368;
+        font-weight: 500;
+        margin-left: 8px;
+    }
+    .badge-gemini {
+        background-color: #E8F0FE;
+        color: #1967D2;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 4px 12px;
+        border-radius: 999px;
+        vertical-align: middle;
+        margin-left: 10px;
+    }
+    .gemini-subtitle {
+        color: #5F6368;
+        font-size: 1rem;
+        margin-top: 0.35rem;
     }
 
-    /* Botões Neon */
+    /* Botões estilo pílula/cartão limpo */
     .stButton > button {
-        border-radius: 10px !important;
-        border: 1px solid rgba(0, 243, 255, 0.35) !important;
-        background: rgba(15, 23, 42, 0.75) !important;
-        color: #E0F2FE !important;
-        transition: all 0.25s ease !important;
+        border-radius: 14px !important;
+        border: 1px solid #E2E8F0 !important;
+        background-color: #F8FAFD !important;
+        color: #1F1F1F !important;
+        font-weight: 500 !important;
+        padding: 0.55rem 1rem !important;
+        transition: all 0.2s ease !important;
+        box-shadow: none !important;
     }
     .stButton > button:hover {
-        border-color: #00F3FF !important;
-        box-shadow: 0 0 15px rgba(0, 243, 255, 0.45) !important;
-        transform: translateY(-1px);
+        background-color: #EEF3FC !important;
+        border-color: #D2E3FC !important;
+        color: #1967D2 !important;
     }
     .stButton > button[kind="primary"] {
-        background: linear-gradient(90deg, #0284C7 0%, #7C3AED 100%) !important;
-        border: 1px solid #00F3FF !important;
-        color: white !important;
-        font-weight: 700 !important;
+        background-color: #D3E3FD !important;
+        border: none !important;
+        color: #041E49 !important;
+        font-weight: 600 !important;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background-color: #C2D7FA !important;
     }
 
-    /* Balões do Chat estilo Holograma */
+    /* Mensagens do Chat estilo Gemini */
     [data-testid="stChatMessage"] {
-        background: rgba(15, 23, 42, 0.65) !important;
-        border: 1px solid rgba(56, 189, 248, 0.22) !important;
-        border-radius: 14px !important;
-        padding: 1rem !important;
-        margin-bottom: 0.7rem !important;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+        background-color: #F8FAFD !important;
+        border: 1px solid #EDF2F7 !important;
+        border-radius: 18px !important;
+        padding: 1rem 1.2rem !important;
+        margin-bottom: 0.75rem !important;
+        color: #1F1F1F !important;
     }
 
-    /* Caixa de digitação inferior */
+    /* Caixa de texto inferior arredondada */
     [data-testid="stChatInput"] {
-        border-radius: 14px !important;
-        border: 1px solid rgba(0, 243, 255, 0.4) !important;
-        background-color: rgba(10, 18, 36, 0.9) !important;
+        border-radius: 24px !important;
+        border: 1px solid #CBD5E1 !important;
+        background-color: #F0F4F9 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -205,21 +204,21 @@ def processar_envio_publico(texto_usuario):
     resp = gerar_resposta(texto_usuario, conv_ativa["mensagens"][:-1], instrucao_pub, 0.7)
     conv_ativa["mensagens"].append({"role": "assistant", "content": resp})
 
-# BARRA LATERAL FUTURISTA
+# BARRA LATERAL LIMPA ESTILO GEMINI
 with st.sidebar:
-    st.markdown(f"<div style='font-family:Orbitron; font-size:1.35rem; font-weight:800; color:#00F3FF;'>🤖 L.U.C.A IA</div>", unsafe_allow_html=True)
-    st.caption(f"Lógica Unificada de Conhecimento e Ação")
+    st.markdown("### ✨ L.U.C.A IA")
+    st.caption("Lógica Unificada de Conhecimento e Ação")
     st.caption(f"🕒 {obter_data_hora_atual()}")
     
-    if st.button("➕ Nova Sessão Neural", use_container_width=True, type="primary"):
+    if st.button("➕ Nova conversa", use_container_width=True, type="primary"):
         criar_nova_conversa()
         st.rerun()
 
-    st.markdown("### 📡 Histórico de Sessões")
+    st.markdown("##### Recentes")
     for id_conv in reversed(list(st.session_state.conversas.keys())):
         dados_conv = st.session_state.conversas[id_conv]
         col_titulo, col_del = st.columns([0.82, 0.18])
-        icone_chat = "💠" if id_conv == st.session_state.conversa_atual else "💬"
+        icone_chat = "💬" if id_conv == st.session_state.conversa_atual else "🗨️"
         with col_titulo:
             if st.button(f"{icone_chat} {dados_conv['titulo']}", key=f"btn_{id_conv}", use_container_width=True):
                 st.session_state.conversa_atual = id_conv
@@ -230,7 +229,21 @@ with st.sidebar:
                 st.rerun()
 
     st.divider()
-    st.caption(f"Núcleo: 🟢 Online • `{VERSAO_IA}`")
+    st.caption(f"Status: 🟢 Online • {VERSAO_IA}")
     st.caption("Criado por Luca de Brito Ferreira")
-    st.caption("⚠️ Esta IA está em fase de desenvolvimento.")
+    st.caption("Esta IA está em fase de desenvolvimento.")
+
+# CABEÇALHO PRINCIPAL ESTILO GEMINI
+st.markdown(f"""
+<div class="gemini-header">
+    <div>
+        <span class="gemini-title">✨ L.U.C.A IA</span>
+        <span class="gemini-sigla">— Lógica Unificada de Conhecimento e Ação</span>
+        <span class="badge-gemini">{VERSAO_IA}</span>
+    </div>
+    <div class="gemini-subtitle">Sua assistente inteligente para ajudar com qualquer coisa do dia a dia.</div>
+</div>
+""", unsafe_allow_html=True)
+
+aba_publica, aba_criador, aba_memoria = st.tabs(["💬 Chat", "🎬 Estúdio do Criador", "💾 Banco de Dados"])
 
