@@ -308,4 +308,44 @@ elif st.session_state.modo_tela == "ver_feedbacks":
         for item in lista_fb:
             st.markdown(f"**#{item[0]} • {item[1]}** *({item[3]})*")
             st.info(item[2])
-    elif senha_fb != "":
+      if senha_fb != "" and senha_fb != SENHA_CRIADOR:
+        st.error("Código incorreto.")
+
+elif st.session_state.modo_tela == "estudio":
+    st.subheader("Estúdio do Criador (Acesso Restrito)")
+    senha_est = st.text_input("Código de acesso:", type="password", key="pwd_est")
+    if senha_est != "" and senha_est != SENHA_CRIADOR:
+        st.error("Código incorreto.")
+    if senha_est == SENHA_CRIADOR:
+        st.success("Acesso autorizado, Luca!")
+        if "hist_copiloto" not in st.session_state:
+            st.session_state.hist_copiloto = []
+        for msg in st.session_state.hist_copiloto:
+            with st.chat_message(msg["role"], avatar=":material/movie_edit:" if msg["role"] == "assistant" else ":material/person:"):
+                st.markdown(msg["content"])
+        if prompt_yt := st.chat_input("Peça roteiros ou salve na memória...", key="in_yt"):
+            st.session_state.hist_copiloto.append({"role": "user", "content": prompt_yt})
+            inst_yt = f"Você é a L.U.C.AI ({VERSAO_IA}) operando para o criador Luca Legal. Se pedir para salvar/lembrar algo, inclua no final: [SALVAR_MEMORIA: texto]. DNA: {ler_dna_criador()}. MEMÓRIAS: {banco_memoria.buscar_todas_notas()}"
+            resp = gerar_resposta(prompt_yt, st.session_state.hist_copiloto[:-1], inst_yt, 0.7)
+            match = re.search(r"\[SALVAR_MEMORIA:\s*(.*?)\]", resp, re.DOTALL)
+            if match:
+                txt = match.group(1).strip()
+                banco_memoria.salvar_nota("Atualização via Chat", txt)
+                resp = re.sub(r"\[SALVAR_MEMORIA:.*?\]", "", resp, flags=re.DOTALL).strip() + f"\n\n*Salvo na memória:* `{txt}`"
+            st.session_state.hist_copiloto.append({"role": "assistant", "content": resp})
+            st.rerun()
+
+elif st.session_state.modo_tela == "memoria":
+    st.subheader("Banco de Dados (Acesso Restrito)")
+    senha_mem = st.text_input("Código de acesso:", type="password", key="pwd_mem")
+    if senha_mem != "" and senha_mem != SENHA_CRIADOR:
+        st.error("Código incorreto.")
+    if senha_mem == SENHA_CRIADOR:
+        cat = st.selectbox("Categoria", ["Novidade", "Produto/Link", "Informação Geral", "Regra de Resposta"])
+        nota = st.text_area("O que a L.U.C.AI deve memorizar?")
+        if st.button("Salvar Manualmente", icon=":material/save:", type="primary"):
+            if nota.strip():
+                banco_memoria.salvar_nota(cat, nota)
+                st.success("Salvo com sucesso!")
+                st.rerun()
+        st.info(banco_memoria.buscar_todas_notas() or "Nenhuma memória extra salva.")
