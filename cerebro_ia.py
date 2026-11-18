@@ -7,8 +7,10 @@ from groq import Groq
 import streamlit as st
 import banco_memoria
 
-TEM_LOGO = os.path.exists("logo.png")
-ICONE_PAGINA = "logo.png" if TEM_LOGO else ":material/auto_awesome:"
+ARQUIVOS_IMG = [f for f in os.listdir(".") if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))]
+ARQUIVO_LOGO = ARQUIVOS_IMG[0] if ARQUIVOS_IMG else None
+TEM_LOGO = ARQUIVO_LOGO is not None
+ICONE_PAGINA = ARQUIVO_LOGO if TEM_LOGO else ":material/auto_awesome:"
 
 st.set_page_config(page_title="L.U.C.A IA (BETA v1.6) — Lógica Unificada de Conhecimento e Ação", page_icon=ICONE_PAGINA, layout="wide", initial_sidebar_state="expanded")
 banco_memoria.iniciar_banco()
@@ -114,7 +116,7 @@ def processar_envio_publico(texto_usuario):
 
 with st.sidebar:
     if TEM_LOGO:
-        st.image("logo.png", width=180)
+        st.image(ARQUIVO_LOGO, width=180)
     else:
         st.markdown("### :material/auto_awesome: L.U.C.A IA")
     st.caption("Lógica Unificada de Conhecimento e Ação")
@@ -156,12 +158,12 @@ with st.sidebar:
 col_logo, col_txt = st.columns([0.12, 0.88])
 with col_logo:
     if TEM_LOGO:
-        st.image("logo.png", width=85)
+        st.image(ARQUIVO_LOGO, width=85)
 with col_txt:
     st.markdown(f"<div><span class='gemini-title'>L.U.C.A IA</span><span class='gemini-sigla'>— Lógica Unificada de Conhecimento e Ação</span><span class='badge-gemini'>{VERSAO_IA}</span></div><div class='gemini-subtitle'>Sua assistente inteligente para ajudar com qualquer coisa do dia a dia.</div>", unsafe_allow_html=True)
 st.divider()
 
-avatar_ia = "logo.png" if TEM_LOGO else ":material/auto_awesome:"
+avatar_ia = ARQUIVO_LOGO if TEM_LOGO else ":material/auto_awesome:"
 
 if st.session_state.modo_tela == "chat":
     conv = st.session_state.conversas[st.session_state.conversa_atual]
