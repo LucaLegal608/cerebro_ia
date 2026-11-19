@@ -219,7 +219,7 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     for modelo in modelos:
         try:
             resposta = client.chat.completions.create(model=modelo, messages=mensagens_formatadas, temperature=temperatura)
-            return resposta.choices.message.content
+          return resposta.choices[0].message.content
         except Exception as erro:
             ultimo_erro = str(erro)
             time.sleep(1)
