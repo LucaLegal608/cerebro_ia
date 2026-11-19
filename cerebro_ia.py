@@ -55,7 +55,6 @@ def obter_data_hora_atual():
 
 MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.0**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — com ferramentas avançadas, memória, voz, arquivos e personalização total no menu **⋮ Configurações**. Como posso ajudar hoje?"
 
-# Inicialização das Configurações Completas (5 Categorias)
 CFG_PADRAO = {
     "system_prompt": "",
     "tom_voz": "Casual e Amigável",
@@ -92,7 +91,7 @@ if "usuario_logado" not in st.session_state:
         dados_usr = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=?", (usr_salvo,)).fetchone()
         conn.close()
         if dados_usr:
-            st.session_state.usuario_logado = {"usuario": dados_usr[0], "nome": dados_usr[1]}
+            st.session_state.usuario_logado = {"usuario": dados_usr, "nome": dados_usr}
 
 if "conversas" not in st.session_state:
     id_ini = str(uuid.uuid4())
@@ -220,7 +219,7 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     for modelo in modelos:
         try:
             resposta = client.chat.completions.create(model=modelo, messages=mensagens_formatadas, temperature=temperatura)
-            return resposta.choices[0].message.content
+            return resposta.choices.message.content
         except Exception as erro:
             ultimo_erro = str(erro)
             time.sleep(1)
@@ -229,10 +228,9 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
 def processar_envio_publico(texto_usuario):
     cfg = st.session_state.cfg
     if st.session_state.msgs_hoje >= cfg["limite_msgs_dia"]:
-        st.warning(f"Limite diário de {cfg['limite_msgs_dia']} mensagens atingido! Ajuste em Configurações > Segurança.")
+        st.warning(f"Limite diário de {cfg['limite_msgs_dia']} mensagens atingido! Ajuste em Configurações.")
         return
 
-    # Aplica atalhos personalizados (ex: /resumir)
     for cmd, expansao in cfg["atalhos"].items():
         if texto_usuario.strip().startswith(cmd):
             resto = texto_usuario.strip()[len(cmd):].strip()
@@ -246,7 +244,7 @@ def processar_envio_publico(texto_usuario):
     st.session_state.msgs_hoje += 1
 
     nome_usr = st.session_state.usuario_logado["nome"] if st.session_state.usuario_logado else "Visitante"
-    mems_usr = "\n".join([f"- {f[1]}" for f in ler_memorias_usuario()])
+    mems_usr = "\n".join([f"- {f}" for f in ler_memorias_usuario()])
     apps_ativos = [k for k, v in cfg["conexoes"].items() if v]
     
     bloco_regras = f"""Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa com {nome_usr}.
@@ -255,7 +253,7 @@ def processar_envio_publico(texto_usuario):
     - TAMANHO DA RESPOSTA: {cfg['tamanho']}.
     - INSTRUÇÕES DO USUÁRIO: {cfg['system_prompt'] or 'Nenhuma regra extra.'}
     - MEMÓRIA APRENDIDA SOBRE O USUÁRIO: {mems_usr or 'Nenhum fato salvo ainda.'}
-    - BASE DE CONHECIMENTO (ARQUIVOS/LINKS): {cfg['base_conhecimento'][:4000] if cfg['base_conhecimento'] else 'Nenhum arquivo anexado.'}
+    - BASE DE CONHECIMENTO (ARQUIVOS/LINKS): {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum arquivo anexado.'}
     - INTEGRAÇÕES CONECTADAS: {', '.join(apps_ativos) if apps_ativos else 'Nenhuma'} | MODO DE APROVAÇÃO: {cfg['modo_aprovacao']}.
     - RECURSO DE IMAGENS ({'ATIVO' if cfg['img_ativa'] else 'DESATIVADO'}): Se o usuário pedir uma imagem e estiver ativo, gere um card visual usando Markdown `![Imagem](https://pollinations.ai)`.
     - CONTEXTO DO CRIADOR (use só se perguntarem sobre o canal Luca Legal): {ler_dna_criador()}. MEMÓRIAS GERAIS: {banco_memoria.buscar_todas_notas()}."""
@@ -275,7 +273,7 @@ with st.sidebar:
             criar_nova_conversa()
             st.rerun()
         if st.session_state.cfg["modo_anonimo"]:
-            st.warning("Modo Anônimo Ativo (Sem salvar títulos)")
+            st.warning("Modo Anônimo Ativo")
         st.markdown("##### Recentes")
         for id_conv in reversed(list(st.session_state.conversas.keys())):
             dados = st.session_state.conversas[id_conv]
@@ -371,23 +369,26 @@ def tela_configuracoes():
         st.markdown("#### Personalidade e Comportamento")
         cfg["system_prompt"] = st.text_area("Instruções personalizadas (System Prompt):", value=cfg["system_prompt"], placeholder="Ex: Sempre responda em tópicos ou Aja como um especialista financeiro...")
         c_tom, c_tam, c_idi = st.columns(3)
+        lista_tons = ["Casual e Amigável", "Formal e Profissional", "Direto ao Ponto", "Criativo", "Didático"]
+        lista_tams = ["Curto e direto", "Equilibrado", "Detalhado"]
+        lista_idis = ["Português (Brasil)", "Detecção Automática", "Inglês", "Espanhol"]
         with c_tom:
-            cfg["tom_voz"] = st.selectbox("Tom de voz:", ["Casual e Amigável", "Formal e Profissional", "Direto ao Ponto", "Criativo", "Didático"], index=["Casual e Amigável", "Formal e Profissional", "Direto ao Ponto", "Criativo", "Didático"].index(cfg["tom_voz"]))
+            cfg["tom_voz"] = st.selectbox("Tom de voz:", lista_tons, index=lista_tons.index(cfg["tom_voz"]))
         with c_tam:
-            cfg["tamanho"] = st.selectbox("Tamanho das respostas:", ["Curto e direto", "Equilibrado", "Detalhado"], index=["Curto e direto", "Equilibrado", "Detalhado"].index(cfg["tamanho"]))
+            cfg["tamanho"] = st.selectbox("Tamanho das respostas:", lista_tams, index=lista_tams.index(cfg["tamanho"]))
         with c_idi:
-            cfg["idioma"] = st.selectbox("Idioma padrão:", ["Português (Brasil)", "Detecção Automática", "Inglês", "Espanhol"], index=["Português (Brasil)", "Detecção Automática", "Inglês", "Espanhol"].index(cfg["idioma"]))
+            cfg["idioma"] = st.selectbox("Idioma padrão:", lista_idis, index=lista_idis.index(cfg["idioma"]))
         cfg["temperatura"] = st.slider("Nível de criatividade (Temperatura) — 0.0 Preciso até 1.0 Criativo:", 0.0, 1.0, float(cfg["temperatura"]), 0.1)
-        st.success("Alterações de personalidade aplicadas automaticamente!")
+        st.success("Configurações de personalidade ativas!")
 
     with aba2:
         st.markdown("#### Memória e Contexto")
-        cfg["janela_contexto"] = st.slider("Janela de contexto (quantas mensagens anteriores a IA lembra):", 2, 30, int(cfg["janela_contexto"]))
+        cfg["janela_contexto"] = st.slider("Janela de contexto (mensagens anteriores lembradas):", 2, 30, int(cfg["janela_contexto"]))
         st.divider()
         st.markdown("**Gerenciador de Memória (Fatos sobre você)**")
         usr_at = st.session_state.usuario_logado["usuario"] if st.session_state.usuario_logado else "visitante"
-        novo_fato = st.text_input("Adicionar fato na memória (ex: 'Meu nome é Luca e gosto de Python'):")
-        if st.button("Salvar na Memória", icon=":material/add:", help="Grava esse fato para a IA lembrar sempre"):
+        novo_fato = st.text_input("Adicionar fato na memória:")
+        if st.button("Salvar na Memória", icon=":material/add:", help="Grava esse fato na memória"):
             if novo_fato.strip():
                 conn = sqlite3.connect("memoria.db")
                 conn.execute("INSERT INTO memorias_usr (usuario, fato) VALUES (?, ?)", (usr_at, novo_fato.strip()))
@@ -397,7 +398,7 @@ def tela_configuracoes():
         for fid, ftxt in ler_memorias_usuario():
             cm1, cm2 = st.columns([0.85, 0.15])
             cm1.info(ftxt)
-            if cm2.button("", icon=":material/delete:", key=f"del_mem_{fid}", help="Apagar este fato da memória"):
+            if cm2.button("", icon=":material/delete:", key=f"del_mem_{fid}", help="Apagar fato"):
                 conn = sqlite3.connect("memoria.db")
                 conn.execute("DELETE FROM memorias_usr WHERE id=?", (fid,))
                 conn.commit()
@@ -406,7 +407,7 @@ def tela_configuracoes():
 
         st.divider()
         st.markdown("**Base de Conhecimento (Arquivos PDF / TXT / CSV / Código)**")
-        arq_up = st.file_uploader("Enviar documento para a IA consultar antes de responder:", type=["pdf", "txt", "csv", "py", "md"])
+        arq_up = st.file_uploader("Enviar documento para a IA consultar:", type=["pdf", "txt", "csv", "py", "md"])
         if arq_up is not None:
             texto_extraido = ""
             if arq_up.name.lower().endswith(".pdf") and TEM_PDF:
@@ -415,74 +416,67 @@ def tela_configuracoes():
             else:
                 texto_extraido = arq_up.read().decode("utf-8", errors="ignore")
             cfg["base_conhecimento"] = f"Arquivo ({arq_up.name}):\n{texto_extraido[:6000]}"
-            st.success(f"Arquivo '{arq_up.name}' carregado na base de conhecimento!")
+            st.success(f"Arquivo '{arq_up.name}' carregado!")
         if cfg["base_conhecimento"]:
-            if st.button("Remover Arquivo da Base", icon=":material/close:", help="Limpa o arquivo carregado"):
+            if st.button("Remover Arquivo da Base", icon=":material/close:", help="Remove o arquivo"):
                 cfg["base_conhecimento"] = ""
                 st.rerun()
 
     with aba3:
         st.markdown("#### Ferramentas e Integrações (Plugins)")
         t1, t2, t3, t4 = st.columns(4)
-        cfg["web_ativa"] = t1.toggle("Pesquisa na Web", value=cfg["web_ativa"], help="Busca notícias e preços em tempo real")
-        cfg["img_ativa"] = t2.toggle("Geração de Imagens", value=cfg["img_ativa"], help="Permite criar imagens por descrição")
-        cfg["arq_ativo"] = t3.toggle("Leitura de Arquivos", value=cfg["arq_ativo"], help="Consulta PDFs e documentos anexados")
-        cfg["cod_ativo"] = t4.toggle("Execução / Análise de Código", value=cfg["cod_ativo"], help="Ajuda avançada com programação")
-
+        cfg["web_ativa"] = t1.toggle("Pesquisa na Web", value=cfg["web_ativa"])
+        cfg["img_ativa"] = t2.toggle("Geração de Imagens", value=cfg["img_ativa"])
+        cfg["arq_ativo"] = t3.toggle("Leitura de Arquivos", value=cfg["arq_ativo"])
+        cfg["cod_ativo"] = t4.toggle("Execução de Código", value=cfg["cod_ativo"])
         st.divider()
-        st.markdown("**Conexões Externas (Aplicativos)**")
+        st.markdown("**Conexões Externas**")
         ca1, ca2 = st.columns(2)
         cfg["conexoes"]["Google Agenda"] = ca1.toggle("Google Agenda", value=cfg["conexoes"]["Google Agenda"])
         cfg["conexoes"]["Notion"] = ca1.toggle("Notion", value=cfg["conexoes"]["Notion"])
         cfg["conexoes"]["WhatsApp"] = ca2.toggle("WhatsApp", value=cfg["conexoes"]["WhatsApp"])
         cfg["conexoes"]["CRM"] = ca2.toggle("CRM", value=cfg["conexoes"]["CRM"])
-
         st.divider()
-        cfg["modo_aprovacao"] = st.radio("Modo de aprovação de ações:", ["Pedir confirmação antes de agir", "Executar ações automaticamente"], index=0 if cfg["modo_aprovacao"] == "Pedir confirmação antes de agir" else 1)
+        cfg["modo_aprovacao"] = st.radio("Modo de aprovação:", ["Pedir confirmação antes de agir", "Executar ações automaticamente"], index=0 if cfg["modo_aprovacao"] == "Pedir confirmação antes de agir" else 1)
 
     with aba4:
         st.markdown("#### Voz e Interface")
-        cfg["voz_ativa"] = st.toggle("Ativar resposta automática por voz (Áudio nas respostas da IA)", value=cfg["voz_ativa"])
+        cfg["voz_ativa"] = st.toggle("Ativar resposta automática por voz (Áudio nas respostas)", value=cfg["voz_ativa"])
         cv1, cv2 = st.columns(2)
         with cv1:
-            sotaque = st.selectbox("Idioma / Voz da IA:", ["Português (Brasil)", "Inglês (EUA)", "Espanhol"])
+            sotaque = st.selectbox("Voz / Idioma:", ["Português (Brasil)", "Inglês (EUA)", "Espanhol"])
             mapa_voz = {"Português (Brasil)": "pt", "Inglês (EUA)": "en", "Espanhol": "es"}
             cfg["voz_sotaque"] = mapa_voz[sotaque]
         with cv2:
             vel = st.selectbox("Velocidade da fala:", ["Normal", "Mais lenta (Didática)"])
             cfg["voz_lenta"] = (vel == "Mais lenta (Didática)")
-
         st.divider()
         st.markdown("**Atalhos e Comandos Rápidos**")
-        st.caption("Digite o comando no chat (ex: `/resumir texto...`) para aplicar automaticamente:")
         for cmd, desc in list(cfg["atalhos"].items()):
             st.code(f"{cmd} -> {desc}")
         nc1, nc2 = st.columns([0.3, 0.7])
         novo_cmd = nc1.text_input("Novo comando (ex: /traduzir):")
         nova_acao = nc2.text_input("O que ele faz:")
-        if st.button("Adicionar Atalho", icon=":material/bolt:", help="Cria um novo comando rápido"):
+        if st.button("Adicionar Atalho", icon=":material/bolt:", help="Cria comando rápido"):
             if novo_cmd.startswith("/") and nova_acao.strip():
                 cfg["atalhos"][novo_cmd.strip()] = nova_acao.strip()
                 st.rerun()
 
     with aba5:
         st.markdown("#### Privacidade, Limites e Segurança")
-        cfg["modo_anonimo"] = st.toggle("Modo temporário (Incógnito) — não salva títulos nem histórico", value=cfg["modo_anonimo"])
-        cfg["limite_msgs_dia"] = st.number_input("Controle de uso (limite máximo de mensagens por sessão):", min_value=5, max_value=1000, value=int(cfg["limite_msgs_dia"]))
-        st.caption(f"Uso atual nesta sessão: **{st.session_state.msgs_hoje} / {cfg['limite_msgs_dia']}** mensagens.")
-
+        cfg["modo_anonimo"] = st.toggle("Modo temporário (Incógnito) — não salva títulos", value=cfg["modo_anonimo"])
+        cfg["limite_msgs_dia"] = st.number_input("Limite máximo de mensagens por sessão:", min_value=5, max_value=1000, value=int(cfg["limite_msgs_dia"]))
+        st.caption(f"Uso atual: **{st.session_state.msgs_hoje} / {cfg['limite_msgs_dia']}** mensagens.")
         st.divider()
-        st.markdown("**Exportação e Exclusão de Dados**")
         conv_atual = st.session_state.conversas[st.session_state.conversa_atual]
         json_dados = json.dumps(conv_atual["mensagens"], ensure_ascii=False, indent=2)
         csv_dados = "autor,mensagem\n" + "\n".join([f"\"{m['role']}\",\"{m['content'].replace(chr(34), chr(39))}\"" for m in conv_atual["mensagens"]])
         ce1, ce2, ce3 = st.columns(3)
         ce1.download_button("Exportar JSON", data=json_dados, file_name="lucai_historico.json", mime="application/json", use_container_width=True)
         ce2.download_button("Exportar CSV", data=csv_dados, file_name="lucai_historico.csv", mime="text/csv", use_container_width=True)
-        if ce3.button("Apagar Todos os Dados", icon=":material/delete_forever:", use_container_width=True, help="Limpa todas as conversas e memórias da conta"):
+        if ce3.button("Apagar Todos os Dados", icon=":material/delete_forever:", use_container_width=True, help="Limpa conversas"):
             st.session_state.conversas = {}
             criar_nova_conversa()
-            st.success("Todos os dados da sessão foram limpos!")
             st.rerun()
 
 if st.session_state.modo_tela == "chat":
@@ -510,3 +504,19 @@ if st.session_state.modo_tela == "chat":
                 if audio_fp:
                     st.audio(audio_fp, format="audio/mp3")
 
+    if prompt_pub := st.chat_input("Pergunte à L.U.C.AI (ou use /resumir, /corrigir, /ideias)..."):
+        processar_envio_publico(prompt_pub)
+        st.rerun()
+
+elif st.session_state.modo_tela == "configuracoes":
+    tela_configuracoes()
+
+elif st.session_state.modo_tela == "compartilhar":
+    st.subheader("Compartilhar L.U.C.AI")
+    st.code("https://streamlit.app", language="text")
+
+elif st.session_state.modo_tela == "contas":
+    st.subheader("Contas L.U.C.AI")
+    if st.session_state.usuario_logado:
+        st.success(f"Conectado como **{st.session_state.usuario_logado['nome']}** (`@{st.session_state.usuario_logado['usuario']}`).")
+        if st.button("Sair da Conta (Logout)", icon=":material/logout:"):
