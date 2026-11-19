@@ -383,13 +383,22 @@ if st.session_state.modo_tela == "chat":
         with st.chat_message(msg["role"], avatar=":material/memory:" if msg["role"] == "assistant" else ":material/person:"):
             texto_msg = msg["content"]
             match_img = re.search(r"\[GERAR_IMAGEM:\s*(.*?)\]", texto_msg, re.DOTALL)
-            if match_img:
+                     if match_img:
                 prompt_en = match_img.group(1).strip()
                 texto_limpo = re.sub(r"\[GERAR_IMAGEM:.*?\]", "", texto_msg, flags=re.DOTALL).strip()
                 if texto_limpo:
                     st.markdown(texto_limpo)
-                url_img = f"https://pollinations.ai{urllib.parse.quote(prompt_en)}?width=1024&height=1024&nologo=true&seed={idx + 42}"
-                st.image(url_img, caption=f"Imagem gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
+                with st.spinner("Desenhando sua imagem..."):
+                    url_img = f"https://pollinations.ai{urllib.parse.quote(prompt_en)}?width=1024&height=1024&nologo=true&seed={idx + 42}"
+                    try:
+                        resp_img = requests.get(url_img, timeout=25)
+                        if resp_img.status_code == 200 and len(resp_img.content) > 1000:
+                            st.image(resp_img.content, caption=f"Arte gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
+                            st.download_button("Baixar Imagem", data=resp_img.content, file_name=f"lucai_arte_{idx}.jpg", mime="image/jpeg", key=f"dl_img_{idx}")
+                        else:
+                            st.image(url_img, caption=f"Arte gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
+                    except Exception:
+                        st.image(url_img, caption=f"Arte gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
             else:
                 st.markdown(texto_msg)
 
