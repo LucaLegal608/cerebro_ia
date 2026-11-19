@@ -266,7 +266,6 @@ with st.sidebar:
             st.session_state.menu_aberto = False
             st.rerun()
     
-        )
         if st.button("Compartilhar L.U.C.AI", icon=":material/share:", use_container_width=True):
             st.session_state.modo_tela = "compartilhar"
             st.session_state.menu_aberto = False
