@@ -28,15 +28,20 @@ try:
 except ImportError:
     TEM_VOZ = False
 
-st.set_page_config(page_title="L.U.C.AI (v3.0) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="L.U.C.AI (v3.1) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
 banco_memoria.iniciar_banco()
 
 def iniciar_tabelas_v3():
     conn = sqlite3.connect("memoria.db")
     c = conn.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS usuarios (usuario TEXT PRIMARY KEY, senha TEXT, nome TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS usuarios (usuario TEXT PRIMARY KEY, senha TEXT, nome TEXT, creditos INTEGER DEFAULT 10)")
     c.execute("CREATE TABLE IF NOT EXISTS feedbacks (id INTEGER PRIMARY KEY AUTOINCREMENT, autor TEXT, mensagem TEXT, data TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS memorias_usr (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario TEXT, fato TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS codigos_pagos (codigo TEXT PRIMARY KEY, valor INTEGER, usado INTEGER DEFAULT 0)")
+    try:
+        c.execute("ALTER TABLE usuarios ADD COLUMN creditos INTEGER DEFAULT 10")
+    except Exception:
+        pass
     conn.commit()
     conn.close()
 
@@ -46,14 +51,14 @@ CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 SENHA_CRIADOR = "947298688"
-VERSAO_IA = "v3.0"
+VERSAO_IA = "v3.1"
 
 def obter_data_hora_atual():
     agora = datetime.now(timezone(timedelta(hours=-3)))
     dias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.0**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — com ferramentas avançadas, memória, voz, arquivos e personalização total no menu **⋮ Configurações**. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.1**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — com memória, voz, leitura de arquivos, loja de créditos e personalização total no menu **⋮**. Como posso ajudar hoje?"
 
 CFG_PADRAO = {
     "system_prompt": "",
@@ -83,6 +88,9 @@ if "cfg" not in st.session_state:
 if "msgs_hoje" not in st.session_state:
     st.session_state.msgs_hoje = 0
 
+if "creditos_visitante" not in st.session_state:
+    st.session_state.creditos_visitante = 5
+
 if "usuario_logado" not in st.session_state:
     st.session_state.usuario_logado = None
     if "sessao" in st.query_params:
@@ -91,7 +99,7 @@ if "usuario_logado" not in st.session_state:
         dados_usr = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=?", (usr_salvo,)).fetchone()
         conn.close()
         if dados_usr:
-            st.session_state.usuario_logado = {"usuario": dados_usr, "nome": dados_usr}
+            st.session_state.usuario_logado = {"usuario": dados_usr[0], "nome": dados_usr[1]}
 
 if "conversas" not in st.session_state:
     id_ini = str(uuid.uuid4())
@@ -103,6 +111,25 @@ if "modo_tela" not in st.session_state:
 
 if "menu_aberto" not in st.session_state:
     st.session_state.menu_aberto = False
+
+def obter_creditos():
+    if st.session_state.usuario_logado:
+        conn = sqlite3.connect("memoria.db")
+        row = conn.execute("SELECT creditos FROM usuarios WHERE usuario=?", (st.session_state.usuario_logado["usuario"],)).fetchone()
+        conn.close()
+        return row[0] if (row and row[0] is not None) else 10
+    return st.session_state.creditos_visitante
+
+def alterar_creditos(delta):
+    if st.session_state.usuario_logado:
+        atual = obter_creditos()
+        novo = max(0, atual + delta)
+        conn = sqlite3.connect("memoria.db")
+        conn.execute("UPDATE usuarios SET creditos=? WHERE usuario=?", (novo, st.session_state.usuario_logado["usuario"]))
+        conn.commit()
+        conn.close()
+    else:
+        st.session_state.creditos_visitante = max(0, st.session_state.creditos_visitante + delta)
 
 def criar_nova_conversa():
     nid = str(uuid.uuid4())
@@ -227,8 +254,19 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
 
 def processar_envio_publico(texto_usuario):
     cfg = st.session_state.cfg
+    custo = 1
+    if cfg["web_ativa"] or cfg["base_conhecimento"]:
+        custo = 2
+    if cfg["voz_ativa"]:
+        custo = 3
+
+    saldo = obter_creditos()
+    if saldo < custo:
+        st.error(f"Créditos insuficientes! Esta ação custa **{custo} créditos ⚡**, mas você tem **{saldo}**. Acesse **Loja de Créditos** no menu **⋮** para recarregar!")
+        return
+
     if st.session_state.msgs_hoje >= cfg["limite_msgs_dia"]:
-        st.warning(f"Limite diário de {cfg['limite_msgs_dia']} mensagens atingido! Ajuste em Configurações.")
+        st.warning(f"Limite diário de {cfg['limite_msgs_dia']} mensagens atingido!")
         return
 
     for cmd, expansao in cfg["atalhos"].items():
@@ -244,28 +282,32 @@ def processar_envio_publico(texto_usuario):
     st.session_state.msgs_hoje += 1
 
     nome_usr = st.session_state.usuario_logado["nome"] if st.session_state.usuario_logado else "Visitante"
-    mems_usr = "\n".join([f"- {f}" for f in ler_memorias_usuario()])
+    mems_usr = "\n".join([f"- {f}" for _, f in ler_memorias_usuario()])
     apps_ativos = [k for k, v in cfg["conexoes"].items() if v]
     
     bloco_regras = f"""Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa com {nome_usr}.
-    - IDIOMA: {cfg['idioma']} (se for Detecção Automática, responda no idioma da pergunta; caso contrário, use exclusivamente o idioma escolhido).
+    - IDIOMA: {cfg['idioma']}.
     - TOM DE VOZ: {cfg['tom_voz']}.
     - TAMANHO DA RESPOSTA: {cfg['tamanho']}.
     - INSTRUÇÕES DO USUÁRIO: {cfg['system_prompt'] or 'Nenhuma regra extra.'}
     - MEMÓRIA APRENDIDA SOBRE O USUÁRIO: {mems_usr or 'Nenhum fato salvo ainda.'}
-    - BASE DE CONHECIMENTO (ARQUIVOS/LINKS): {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum arquivo anexado.'}
-    - INTEGRAÇÕES CONECTADAS: {', '.join(apps_ativos) if apps_ativos else 'Nenhuma'} | MODO DE APROVAÇÃO: {cfg['modo_aprovacao']}.
-    - RECURSO DE IMAGENS ({'ATIVO' if cfg['img_ativa'] else 'DESATIVADO'}): Se o usuário pedir uma imagem e estiver ativo, gere um card visual usando Markdown `![Imagem](https://pollinations.ai)`.
-    - CONTEXTO DO CRIADOR (use só se perguntarem sobre o canal Luca Legal): {ler_dna_criador()}. MEMÓRIAS GERAIS: {banco_memoria.buscar_todas_notas()}."""
+    - BASE DE CONHECIMENTO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum arquivo anexado.'}
+    - INTEGRAÇÕES: {', '.join(apps_ativos) if apps_ativos else 'Nenhuma'} | APROVAÇÃO: {cfg['modo_aprovacao']}.
+    - IMAGENS ({'ATIVO' if cfg['img_ativa'] else 'DESATIVADO'}): Se o usuário pedir uma imagem e estiver ativo, gere `![Imagem](https://pollinations.ai)`.
+    - CONTEXTO DO CRIADOR: {ler_dna_criador()}. MEMÓRIAS GERAIS: {banco_memoria.buscar_todas_notas()}."""
 
     dados_web = pesquisar_na_web(texto_usuario) if cfg["web_ativa"] else ""
     resp = gerar_resposta(texto_usuario, conv["mensagens"][:-1], bloco_regras + dados_web, cfg["temperatura"])
+    alterar_creditos(-custo)
     conv["mensagens"].append({"role": "assistant", "content": resp})
 
 with st.sidebar:
     st.markdown("### :material/memory: L.U.C.AI")
     st.caption("Lógica Unificada de Conhecimento e Ação Inteligente")
     st.caption(f":material/schedule: {obter_data_hora_atual()}")
+
+    saldo_atual = obter_creditos()
+    st.metric(label="Seus Créditos", value=f"{saldo_atual} ⚡")
 
     if st.session_state.usuario_logado:
         st.success(f"Conectado: **{st.session_state.usuario_logado['nome']}**")
@@ -287,8 +329,8 @@ with st.sidebar:
                 excluir_conversa(id_conv)
                 st.rerun()
     else:
-        st.info("Modo Visitante (Simplificado)")
-        if st.button("Entrar / Criar Conta", icon=":material/login:", use_container_width=True, help="Crie sua conta gratuita para liberar todas as configurações"):
+        st.info("Modo Visitante (5 créditos de teste)")
+        if st.button("Entrar / Criar Conta (+10 ⚡)", icon=":material/login:", use_container_width=True, help="Crie sua conta gratuita para ganhar 10 créditos de teste"):
             st.session_state.modo_tela = "contas"
             st.rerun()
 
@@ -299,6 +341,10 @@ with st.sidebar:
     if st.session_state.menu_aberto:
         if st.button("Chat Principal", icon=":material/chat:", use_container_width=True, help="Voltar para o chat com a L.U.C.AI"):
             st.session_state.modo_tela = "chat"
+            st.session_state.menu_aberto = False
+            st.rerun()
+        if st.button("Loja de Créditos ⚡", icon=":material/shopping_cart:", use_container_width=True, help="Comprar pacotes de créditos ou ativar código pago"):
+            st.session_state.modo_tela = "creditos"
             st.session_state.menu_aberto = False
             st.rerun()
         if st.button("Configurações Completas", icon=":material/settings:", use_container_width=True, help="Personalidade, Memória, Plugins, Voz e Segurança"):
@@ -358,15 +404,85 @@ if st.session_state.modo_tela != "chat":
         st.session_state.modo_tela = "chat"
         st.rerun()
 
+def tela_creditos():
+    st.subheader("Loja de Créditos — L.U.C.AI ⚡")
+    st.metric("Seu Saldo Atual", f"{obter_creditos()} créditos")
+    st.caption("Consumo por uso: Mensagem = **1 ⚡** | Pesquisa Web / Arquivo = **2 ⚡** | Voz / Áudio = **3 ⚡**")
+
+    st.divider()
+    st.markdown("### Escolha seu Pacote de Créditos")
+    p1, p2, p3 = st.columns(3)
+
+    with p1:
+        st.info("**Pacote Inicial**\n\n### +100 Créditos ⚡\n\n**R$ 9,90** *(pagamento único)*")
+        st.link_button("Comprar 100 ⚡ (R$ 9,90)", "https://mercadopago.com.br", use_container_width=True)
+
+    with p2:
+        st.success("**Pacote Criador (Mais Vendido)**\n\n### +350 Créditos ⚡\n\n**R$ 24,90** *(pagamento único)*")
+        st.link_button("Comprar 350 ⚡ (R$ 24,90)", "https://mercadopago.com.br", use_container_width=True)
+
+    with p3:
+        st.warning("**Pacote Pro Max**\n\n### +1.000 Créditos ⚡\n\n**R$ 49,90** *(pagamento único)*")
+        st.link_button("Comprar 1.000 ⚡ (R$ 49,90)", "https://mercadopago.com.br", use_container_width=True)
+
+    st.caption("Após concluir o pagamento, insira abaixo o **Código de Ativação** recebido no comprovante:")
+
+    with st.form("form_resgate_pago"):
+        cod_input = st.text_input("Código de Ativação do Pacote:")
+        if st.form_submit_button("Ativar Créditos Comprados", icon=":material/verified:", type="primary"):
+            cod = cod_input.strip().upper()
+            if cod:
+                conn = sqlite3.connect("memoria.db")
+                row = conn.execute("SELECT valor, usado FROM codigos_pagos WHERE codigo=?", (cod,)).fetchone()
+                if not row:
+                    conn.close()
+                    st.error("Código inválido. Verifique se digitou corretamente.")
+                elif row[1] == 1:
+                    conn.close()
+                    st.error("Este código já foi utilizado anteriormente.")
+                else:
+                    conn.execute("UPDATE codigos_pagos SET usado=1 WHERE codigo=?", (cod,))
+                    conn.commit()
+                    conn.close()
+                    alterar_creditos(row[0])
+                    st.success(f"Pagamento confirmado! +{row[0]} créditos ⚡ adicionados à sua conta!")
+                    st.rerun()
+
+    st.divider()
+    with st.expander("Painel Financeiro do Criador (Gerar Códigos e Creditar)"):
+        s_cred = st.text_input("Código de acesso do criador:", type="password", key="pwd_cred")
+        if s_cred == SENHA_CRIADOR:
+            st.markdown("#### 1. Gerar Código de Recarga Único (Para Entregar ao Cliente)")
+            col_g1, col_g2 = st.columns(2)
+            pacote_gerar = col_g1.selectbox("Valor do pacote pago:", [100, 350, 1000])
+            if col_g2.button("Gerar Novo Código Único", icon=":material/key:"):
+                novo_cod = f"LUCA-{pacote_gerar}-{str(uuid.uuid4())[:6].upper()}"
+                conn = sqlite3.connect("memoria.db")
+                conn.execute("INSERT INTO codigos_pagos (codigo, valor, usado) VALUES (?, ?, 0)", (novo_cod, pacote_gerar))
+                conn.commit()
+                conn.close()
+                st.success("Código gerado com sucesso (uso único):")
+                st.code(novo_cod, language="text")
+
+            st.divider()
+            st.markdown("#### 2. Enviar Créditos Direto para um Usuário")
+            u_alvo = st.text_input("Nome de usuário do comprador:")
+            qtd_add = st.number_input("Quantidade de créditos:", min_value=10, max_value=50000, value=100)
+            if st.button("Creditar Conta Manualmente", icon=":material/send:"):
+                conn = sqlite3.connect("memoria.db")
+                conn.execute("UPDATE usuarios SET creditos = COALESCE(creditos, 10) + ? WHERE usuario=?", (qtd_add, u_alvo.strip()))
+                conn.commit()
+                conn.close()
+                st.success(f"+{qtd_add} créditos adicionados para @{u_alvo.strip()}!")
+
 def tela_configuracoes():
-    st.subheader("Central de Configurações — L.U.C.AI v3.0")
+    st.subheader("Central de Configurações — L.U.C.AI v3.1")
     cfg = st.session_state.cfg
     aba1, aba2, aba3, aba4, aba5 = st.tabs([
         "1. Personalidade", "2. Memória & Arquivos", "3. Ferramentas & Apps", "4. Voz & Atalhos", "5. Privacidade & Segurança"
     ])
 
     with aba1:
-        st.markdown("#### Personalidade e Comportamento")
         cfg["system_prompt"] = st.text_area("Instruções personalizadas (System Prompt):", value=cfg["system_prompt"], placeholder="Ex: Sempre responda em tópicos ou Aja como um especialista financeiro...")
         c_tom, c_tam, c_idi = st.columns(3)
         lista_tons = ["Casual e Amigável", "Formal e Profissional", "Direto ao Ponto", "Criativo", "Didático"]
@@ -378,17 +494,13 @@ def tela_configuracoes():
             cfg["tamanho"] = st.selectbox("Tamanho das respostas:", lista_tams, index=lista_tams.index(cfg["tamanho"]))
         with c_idi:
             cfg["idioma"] = st.selectbox("Idioma padrão:", lista_idis, index=lista_idis.index(cfg["idioma"]))
-        cfg["temperatura"] = st.slider("Nível de criatividade (Temperatura) — 0.0 Preciso até 1.0 Criativo:", 0.0, 1.0, float(cfg["temperatura"]), 0.1)
-        st.success("Configurações de personalidade ativas!")
+        cfg["temperatura"] = st.slider("Nível de criatividade (Temperatura):", 0.0, 1.0, float(cfg["temperatura"]), 0.1)
 
     with aba2:
-        st.markdown("#### Memória e Contexto")
-        cfg["janela_contexto"] = st.slider("Janela de contexto (mensagens anteriores lembradas):", 2, 30, int(cfg["janela_contexto"]))
-        st.divider()
-        st.markdown("**Gerenciador de Memória (Fatos sobre você)**")
+        cfg["janela_contexto"] = st.slider("Janela de contexto (mensagens lembradas):", 2, 30, int(cfg["janela_contexto"]))
         usr_at = st.session_state.usuario_logado["usuario"] if st.session_state.usuario_logado else "visitante"
         novo_fato = st.text_input("Adicionar fato na memória:")
-        if st.button("Salvar na Memória", icon=":material/add:", help="Grava esse fato na memória"):
+        if st.button("Salvar na Memória", icon=":material/add:"):
             if novo_fato.strip():
                 conn = sqlite3.connect("memoria.db")
                 conn.execute("INSERT INTO memorias_usr (usuario, fato) VALUES (?, ?)", (usr_at, novo_fato.strip()))
@@ -398,18 +510,15 @@ def tela_configuracoes():
         for fid, ftxt in ler_memorias_usuario():
             cm1, cm2 = st.columns([0.85, 0.15])
             cm1.info(ftxt)
-            if cm2.button("", icon=":material/delete:", key=f"del_mem_{fid}", help="Apagar fato"):
+            if cm2.button("", icon=":material/delete:", key=f"del_mem_{fid}"):
                 conn = sqlite3.connect("memoria.db")
                 conn.execute("DELETE FROM memorias_usr WHERE id=?", (fid,))
                 conn.commit()
                 conn.close()
                 st.rerun()
 
-        st.divider()
-        st.markdown("**Base de Conhecimento (Arquivos PDF / TXT / CSV / Código)**")
-        arq_up = st.file_uploader("Enviar documento para a IA consultar:", type=["pdf", "txt", "csv", "py", "md"])
+        arq_up = st.file_uploader("Enviar documento (PDF / TXT / CSV / Código):", type=["pdf", "txt", "csv", "py", "md"])
         if arq_up is not None:
-            texto_extraido = ""
             if arq_up.name.lower().endswith(".pdf") and TEM_PDF:
                 leitor = PdfReader(arq_up)
                 texto_extraido = "\n".join([p.extract_text() or "" for p in leitor.pages])
@@ -417,205 +526,46 @@ def tela_configuracoes():
                 texto_extraido = arq_up.read().decode("utf-8", errors="ignore")
             cfg["base_conhecimento"] = f"Arquivo ({arq_up.name}):\n{texto_extraido[:6000]}"
             st.success(f"Arquivo '{arq_up.name}' carregado!")
-        if cfg["base_conhecimento"]:
-            if st.button("Remover Arquivo da Base", icon=":material/close:", help="Remove o arquivo"):
-                cfg["base_conhecimento"] = ""
-                st.rerun()
 
     with aba3:
-        st.markdown("#### Ferramentas e Integrações (Plugins)")
         t1, t2, t3, t4 = st.columns(4)
         cfg["web_ativa"] = t1.toggle("Pesquisa na Web", value=cfg["web_ativa"])
         cfg["img_ativa"] = t2.toggle("Geração de Imagens", value=cfg["img_ativa"])
         cfg["arq_ativo"] = t3.toggle("Leitura de Arquivos", value=cfg["arq_ativo"])
         cfg["cod_ativo"] = t4.toggle("Execução de Código", value=cfg["cod_ativo"])
-        st.divider()
-        st.markdown("**Conexões Externas**")
         ca1, ca2 = st.columns(2)
         cfg["conexoes"]["Google Agenda"] = ca1.toggle("Google Agenda", value=cfg["conexoes"]["Google Agenda"])
         cfg["conexoes"]["Notion"] = ca1.toggle("Notion", value=cfg["conexoes"]["Notion"])
         cfg["conexoes"]["WhatsApp"] = ca2.toggle("WhatsApp", value=cfg["conexoes"]["WhatsApp"])
         cfg["conexoes"]["CRM"] = ca2.toggle("CRM", value=cfg["conexoes"]["CRM"])
-        st.divider()
         cfg["modo_aprovacao"] = st.radio("Modo de aprovação:", ["Pedir confirmação antes de agir", "Executar ações automaticamente"], index=0 if cfg["modo_aprovacao"] == "Pedir confirmação antes de agir" else 1)
 
     with aba4:
-        st.markdown("#### Voz e Interface")
-        cfg["voz_ativa"] = st.toggle("Ativar resposta automática por voz (Áudio nas respostas)", value=cfg["voz_ativa"])
+        cfg["voz_ativa"] = st.toggle("Ativar resposta automática por voz", value=cfg["voz_ativa"])
         cv1, cv2 = st.columns(2)
         with cv1:
             sotaque = st.selectbox("Voz / Idioma:", ["Português (Brasil)", "Inglês (EUA)", "Espanhol"])
-            mapa_voz = {"Português (Brasil)": "pt", "Inglês (EUA)": "en", "Espanhol": "es"}
-            cfg["voz_sotaque"] = mapa_voz[sotaque]
+            cfg["voz_sotaque"] = {"Português (Brasil)": "pt", "Inglês (EUA)": "en", "Espanhol": "es"}[sotaque]
         with cv2:
             vel = st.selectbox("Velocidade da fala:", ["Normal", "Mais lenta (Didática)"])
             cfg["voz_lenta"] = (vel == "Mais lenta (Didática)")
-        st.divider()
-        st.markdown("**Atalhos e Comandos Rápidos**")
         for cmd, desc in list(cfg["atalhos"].items()):
             st.code(f"{cmd} -> {desc}")
-        nc1, nc2 = st.columns([0.3, 0.7])
-        novo_cmd = nc1.text_input("Novo comando (ex: /traduzir):")
-        nova_acao = nc2.text_input("O que ele faz:")
-        if st.button("Adicionar Atalho", icon=":material/bolt:", help="Cria comando rápido"):
-            if novo_cmd.startswith("/") and nova_acao.strip():
-                cfg["atalhos"][novo_cmd.strip()] = nova_acao.strip()
-                st.rerun()
 
     with aba5:
-        st.markdown("#### Privacidade, Limites e Segurança")
-        cfg["modo_anonimo"] = st.toggle("Modo temporário (Incógnito) — não salva títulos", value=cfg["modo_anonimo"])
-        cfg["limite_msgs_dia"] = st.number_input("Limite máximo de mensagens por sessão:", min_value=5, max_value=1000, value=int(cfg["limite_msgs_dia"]))
-        st.caption(f"Uso atual: **{st.session_state.msgs_hoje} / {cfg['limite_msgs_dia']}** mensagens.")
-        st.divider()
+        cfg["modo_anonimo"] = st.toggle("Modo temporário (Incógnito)", value=cfg["modo_anonimo"])
+        cfg["limite_msgs_dia"] = st.number_input("Limite de mensagens por sessão:", min_value=5, max_value=1000, value=int(cfg["limite_msgs_dia"]))
         conv_atual = st.session_state.conversas[st.session_state.conversa_atual]
         json_dados = json.dumps(conv_atual["mensagens"], ensure_ascii=False, indent=2)
         csv_dados = "autor,mensagem\n" + "\n".join([f"\"{m['role']}\",\"{m['content'].replace(chr(34), chr(39))}\"" for m in conv_atual["mensagens"]])
         ce1, ce2, ce3 = st.columns(3)
         ce1.download_button("Exportar JSON", data=json_dados, file_name="lucai_historico.json", mime="application/json", use_container_width=True)
         ce2.download_button("Exportar CSV", data=csv_dados, file_name="lucai_historico.csv", mime="text/csv", use_container_width=True)
-        if ce3.button("Apagar Todos os Dados", icon=":material/delete_forever:", use_container_width=True, help="Limpa conversas"):
+        if ce3.button("Apagar Todos os Dados", icon=":material/delete_forever:", use_container_width=True):
             st.session_state.conversas = {}
             criar_nova_conversa()
             st.rerun()
 
 if st.session_state.modo_tela == "chat":
     conv = st.session_state.conversas[st.session_state.conversa_atual]
-    if st.session_state.usuario_logado and len(conv["mensagens"]) == 1:
-        c1, c2, c3, c4 = st.columns(4)
-        if c1.button("Notícias de hoje", icon=":material/newspaper:", use_container_width=True, help="Busca notícias atuais"):
-            processar_envio_publico("Quais são as principais notícias de hoje?")
-            st.rerun()
-        if c2.button("Criar um código", icon=":material/code:", use_container_width=True, help="Ajuda com programação"):
-            processar_envio_publico("Quero ajuda para criar um código em Python.")
-            st.rerun()
-        if c3.button("Me ajude a estudar", icon=":material/school:", use_container_width=True, help="Resumos e explicações"):
-            processar_envio_publico("Me ajude a estudar e resumir um assunto importante!")
-            st.rerun()
-        if c4.button("Ideias criativas", icon=":material/lightbulb:", use_container_width=True, help="Ideias para projetos"):
-            processar_envio_publico("Preciso de ideias criativas para um projeto novo!")
-            st.rerun()
-
     for idx, msg in enumerate(conv["mensagens"]):
-        with st.chat_message(msg["role"], avatar=":material/memory:" if msg["role"] == "assistant" else ":material/person:"):
-            st.markdown(msg["content"])
-            if msg["role"] == "assistant" and st.session_state.cfg["voz_ativa"] and idx == len(conv["mensagens"]) - 1 and idx > 0:
-                audio_fp = gerar_audio_voz(msg["content"])
-                if audio_fp:
-                    st.audio(audio_fp, format="audio/mp3")
-
-    if prompt_pub := st.chat_input("Pergunte à L.U.C.AI (ou use /resumir, /corrigir, /ideias)..."):
-        processar_envio_publico(prompt_pub)
-        st.rerun()
-
-elif st.session_state.modo_tela == "configuracoes":
-    tela_configuracoes()
-
-elif st.session_state.modo_tela == "compartilhar":
-    st.subheader("Compartilhar L.U.C.AI")
-    st.code("https://streamlit.app", language="text")
-
-elif st.session_state.modo_tela == "contas":
-    st.subheader("Contas L.U.C.AI")
-    if st.session_state.usuario_logado:
-        st.success(f"Conectado como **{st.session_state.usuario_logado['nome']}** (`@{st.session_state.usuario_logado['usuario']}`).")
-        if st.button("Sair da Conta (Logout)", icon=":material/logout:"):
-            st.session_state.usuario_logado = None
-            st.query_params.clear()
-            st.session_state.modo_tela = "chat"
-            st.rerun()
-    else:
-        aba_entrar, aba_criar = st.tabs(["Entrar na Conta", "Criar Conta Gratuita"])
-        with aba_entrar:
-            with st.form("form_login"):
-                u_login = st.text_input("Nome de usuário:")
-                s_login = st.text_input("Senha:", type="password")
-                if st.form_submit_button("Entrar"):
-                    conn = sqlite3.connect("memoria.db")
-                    res = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=? AND senha=?", (u_login.strip(), s_login.strip())).fetchone()
-                    conn.close()
-                    if res:
-                        st.session_state.usuario_logado = {"usuario": res, "nome": res}
-                        st.query_params["sessao"] = res
-                        st.session_state.modo_tela = "chat"
-                        st.rerun()
-                    else:
-                        st.error("Usuário ou senha incorretos.")
-        with aba_criar:
-            with st.form("form_cadastro"):
-                n_cad = st.text_input("Seu nome:")
-                u_cad = st.text_input("Escolha um usuário (sem espaços):")
-                s_cad = st.text_input("Crie uma senha:", type="password")
-                if st.form_submit_button("Criar Conta Gratuita"):
-                    if n_cad.strip() and u_cad.strip() and s_cad.strip():
-                        conn = sqlite3.connect("memoria.db")
-                        if conn.execute("SELECT usuario FROM usuarios WHERE usuario=?", (u_cad.strip(),)).fetchone():
-                            conn.close()
-                            st.error("Esse nome de usuário já existe.")
-                        else:
-                            conn.execute("INSERT INTO usuarios VALUES (?, ?, ?)", (u_cad.strip(), s_cad.strip(), n_cad.strip()))
-                            conn.commit()
-                            conn.close()
-                            st.session_state.usuario_logado = {"usuario": u_cad.strip(), "nome": n_cad.strip()}
-                            st.query_params["sessao"] = u_cad.strip()
-                            st.session_state.modo_tela = "chat"
-                            st.rerun()
-
-elif st.session_state.modo_tela == "feedback":
-    st.subheader("Enviar Feedback")
-    with st.form("form_feedback"):
-        autor_fb = st.text_input("Seu nome (opcional):")
-        msg_fb = st.text_area("Sua mensagem:")
-        if st.form_submit_button("Enviar Feedback"):
-            if msg_fb.strip():
-                conn = sqlite3.connect("memoria.db")
-                conn.execute("INSERT INTO feedbacks (autor, mensagem, data) VALUES (?, ?, ?)", (autor_fb.strip() or "Anônimo", msg_fb.strip(), obter_data_hora_atual()))
-                conn.commit()
-                conn.close()
-                st.success("Feedback enviado com sucesso!")
-
-elif st.session_state.modo_tela == "ver_feedbacks":
-    st.subheader("Feedbacks Recebidos (Acesso Restrito)")
-    senha_fb = st.text_input("Código de acesso:", type="password", key="pwd_fb")
-    if senha_fb == SENHA_CRIADOR:
-        conn = sqlite3.connect("memoria.db")
-        lista_fb = conn.execute("SELECT id, autor, mensagem, data FROM feedbacks ORDER BY id DESC").fetchall()
-        conn.close()
-        for item in lista_fb:
-            st.markdown(f"**#{item} • {item}** *({item})*")
-            st.info(item)
-
-elif st.session_state.modo_tela == "estudio":
-    st.subheader("Estúdio do Criador (Acesso Restrito)")
-    senha_est = st.text_input("Código de acesso:", type="password", key="pwd_est")
-    if senha_est == SENHA_CRIADOR:
-        st.success("Acesso autorizado, Luca!")
-        if "hist_copiloto" not in st.session_state:
-            st.session_state.hist_copiloto = []
-        for msg in st.session_state.hist_copiloto:
-            with st.chat_message(msg["role"], avatar=":material/movie_edit:" if msg["role"] == "assistant" else ":material/person:"):
-                st.markdown(msg["content"])
-        if prompt_yt := st.chat_input("Peça roteiros ou salve na memória...", key="in_yt"):
-            st.session_state.hist_copiloto.append({"role": "user", "content": prompt_yt})
-            inst_yt = f"Você é a L.U.C.AI ({VERSAO_IA}) operando para o criador Luca Legal. Se pedir para salvar/lembrar algo, inclua no final: [SALVAR_MEMORIA: texto]. DNA: {ler_dna_criador()}. MEMÓRIAS: {banco_memoria.buscar_todas_notas()}"
-            resp = gerar_resposta(prompt_yt, st.session_state.hist_copiloto[:-1], inst_yt, 0.7)
-            match = re.search(r"\[SALVAR_MEMORIA:\s*(.*?)\]", resp, re.DOTALL)
-            if match:
-                txt = match.group(1).strip()
-                banco_memoria.salvar_nota("Atualização via Chat", txt)
-                resp = re.sub(r"\[SALVAR_MEMORIA:.*?\]", "", resp, flags=re.DOTALL).strip() + f"\n\n*Salvo na memória:* `{txt}`"
-            st.session_state.hist_copiloto.append({"role": "assistant", "content": resp})
-            st.rerun()
-
-elif st.session_state.modo_tela == "memoria":
-    st.subheader("Banco de Dados (Acesso Restrito)")
-    senha_mem = st.text_input("Código de acesso:", type="password", key="pwd_mem")
-    if senha_mem == SENHA_CRIADOR:
-        cat = st.selectbox("Categoria", ["Novidade", "Produto/Link", "Informação Geral", "Regra de Resposta"])
-        nota = st.text_area("O que a L.U.C.AI deve memorizar?")
-        if st.button("Salvar Manualmente", icon=":material/save:"):
-            if nota.strip():
-                banco_memoria.salvar_nota(cat, nota)
-                st.success("Salvo com sucesso!")
-                st.rerun()
-        st.info(banco_memoria.buscar_todas_notas() or "Nenhuma memória extra salva.")
