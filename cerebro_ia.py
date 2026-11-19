@@ -383,7 +383,7 @@ if st.session_state.modo_tela == "chat":
         with st.chat_message(msg["role"], avatar=":material/memory:" if msg["role"] == "assistant" else ":material/person:"):
             texto_msg = msg["content"]
             match_img = re.search(r"\[GERAR_IMAGEM:\s*(.*?)\]", texto_msg, re.DOTALL)
-                     if match_img:
+                               if match_img:
                 prompt_en = match_img.group(1).strip()
                 texto_limpo = re.sub(r"\[GERAR_IMAGEM:.*?\]", "", texto_msg, flags=re.DOTALL).strip()
                 if texto_limpo:
@@ -401,6 +401,7 @@ if st.session_state.modo_tela == "chat":
                         st.image(url_img, caption=f"Arte gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
             else:
                 st.markdown(texto_msg)
+
 
     if prompt_pub := st.chat_input("Pergunte à L.U.C.AI ou peça para criar uma imagem..."):
         processar_envio_publico(prompt_pub)
