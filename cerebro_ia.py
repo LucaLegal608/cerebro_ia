@@ -10,6 +10,7 @@ from datetime import datetime, timezone, timedelta
 from groq import Groq
 import streamlit as st
 import banco_memoria
+import telas_extras
 
 try:
     from duckduckgo_search import DDGS
@@ -438,45 +439,12 @@ def tela_creditos():
                 st.success(f"+{qtd_add} créditos gratuitos enviados para @{u_alvo.strip()}!")
 
 def tela_configuracoes():
- if st.session_state.modo_tela == "chat":
-    conv = st.session_state.conversas[st.session_state.conversa_atual]
-    for idx, msg in enumerate(conv["mensagens"]):
-        with st.chat_message(msg["role"], avatar=":material/memory:" if msg["role"] == "assistant" else ":material/person:"):
-            texto_msg = msg["content"]
-            match_img = re.search(r"\[GERAR_IMAGEM:\s*(.*?)\]", texto_msg, re.DOTALL)
-            if match_img:
-                prompt_en = match_img.group(1).strip()
-                texto_limpo = re.sub(r"\[GERAR_IMAGEM:.*?\]", "", texto_msg, flags=re.DOTALL).strip()
-                if texto_limpo:
-                    st.markdown(texto_limpo)
-                url_img = f"https://pollinations.ai{urllib.parse.quote(prompt_en)}?width=1024&height=1024&nologo=true&seed={idx + 42}"
-                st.image(url_img, caption=f"Imagem gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
-            else:
-                st.markdown(texto_msg)
-
-    if prompt_pub := st.chat_input("Pergunte à L.U.C.AI ou peça para criar uma imagem..."):
-        processar_envio_publico(prompt_pub)
-        st.rerun()
-
 elif st.session_state.modo_tela == "creditos":
-    tela_creditos()
+    telas_extras.exibir_tela_creditos(obter_creditos, alterar_creditos, SENHA_CRIADOR)
 
 elif st.session_state.modo_tela == "configuracoes":
-    tela_configuracoes()
+    telas_extras.exibir_tela_configuracoes(ler_memorias_usuario, criar_nova_conversa)
 
-elif st.session_state.modo_tela == "compartilhar":
-    st.subheader("Compartilhar L.U.C.AI")
-    st.code("https://streamlit.app", language="text")
-
-
-elif st.session_state.modo_tela == "contas":
-    st.subheader("Contas L.U.C.AI")
-    if st.session_state.usuario_logado:
-        st.success(f"Conectado como **{st.session_state.usuario_logado['nome']}** (`@{st.session_state.usuario_logado['usuario']}`).")
-        if st.button("Sair da Conta (Logout)", icon=":material/logout:", help="Desconecta sua conta"):
-            st.session_state.usuario_logado = None
-            st.query_params.clear()
-            st.session_state.modo_tela = "chat"
             st.rerun()
     else:
         aba_entrar, aba_criar = st.tabs(["Entrar na Conta", "Criar Conta Gratuita (+10 Créditos Grátis)"])
