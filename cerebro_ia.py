@@ -411,24 +411,24 @@ elif st.session_state.modo_tela == "contas":
     st.subheader("Contas L.U.C.AI")
     if st.session_state.usuario_logado:
         st.success(f"Conectado como **{st.session_state.usuario_logado['nome']}** (`@{st.session_state.usuario_logado['usuario']}`).")
-        if st.button("Sair da Conta (Logout)", icon=":material/logout:", help="Desconecta sua conta"):
+        if st.button("Sair da Conta (Logout)", icon=":material/logout:"):
             st.session_state.usuario_logado = None
             st.query_params.clear()
             st.session_state.modo_tela = "chat"
             st.rerun()
     else:
-              aba_entrar, aba_criar = st.tabs(["Entrar na Conta", "Criar Conta Gratuita (+10 Créditos)"])
+        aba_entrar, aba_criar = st.tabs(["Entrar na Conta", "Criar Conta Gratuita (+10 Créditos)"])
         with aba_entrar:
             with st.form("form_login"):
                 u_login = st.text_input("Nome de usuário:")
                 s_login = st.text_input("Senha:", type="password")
-                if st.form_submit_button("Entrar", help="Acessar sua conta"):
+                if st.form_submit_button("Entrar"):
                     conn = sqlite3.connect("memoria.db")
                     res = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=? AND senha=?", (u_login.strip(), s_login.strip())).fetchone()
                     conn.close()
                     if res:
-                        st.session_state.usuario_logado = {"usuario": res[0], "nome": res[1]}
-                        st.query_params["sessao"] = res[0]
+                        st.session_state.usuario_logado = {"usuario": res, "nome": res}
+                        st.query_params["sessao"] = res
                         st.session_state.modo_tela = "chat"
                         st.rerun()
                     else:
@@ -438,7 +438,7 @@ elif st.session_state.modo_tela == "contas":
                 n_cad = st.text_input("Seu nome:")
                 u_cad = st.text_input("Escolha um usuário (sem espaços):")
                 s_cad = st.text_input("Crie uma senha:", type="password")
-                if st.form_submit_button("Criar Conta Grátis (+10 Créditos)", help="Cria sua conta gratuita e ganha 10 créditos de graça"):
+                if st.form_submit_button("Criar Conta Grátis (+10 Créditos)"):
                     if n_cad.strip() and u_cad.strip() and s_cad.strip():
                         conn = sqlite3.connect("memoria.db")
                         if conn.execute("SELECT usuario FROM usuarios WHERE usuario=?", (u_cad.strip(),)).fetchone():
@@ -458,7 +458,7 @@ elif st.session_state.modo_tela == "feedback":
     with st.form("form_feedback"):
         autor_fb = st.text_input("Seu nome (opcional):")
         msg_fb = st.text_area("Sua mensagem:")
-        if st.form_submit_button("Enviar Feedback", help="Envia sua mensagem para o criador"):
+        if st.form_submit_button("Enviar Feedback"):
             if msg_fb.strip():
                 conn = sqlite3.connect("memoria.db")
                 conn.execute("INSERT INTO feedbacks (autor, mensagem, data) VALUES (?, ?, ?)", (autor_fb.strip() or "Anônimo", msg_fb.strip(), obter_data_hora_atual()))
@@ -474,8 +474,8 @@ elif st.session_state.modo_tela == "ver_feedbacks":
         lista_fb = conn.execute("SELECT id, autor, mensagem, data FROM feedbacks ORDER BY id DESC").fetchall()
         conn.close()
         for item in lista_fb:
-            st.markdown(f"**#{item[0]} • {item[1]}** *({item[3]})*")
-            st.info(item[2])
+            st.markdown(f"**#{item} • {item}** *({item})*")
+            st.info(item)
 
 elif st.session_state.modo_tela == "estudio":
     st.subheader("Estúdio do Criador (Acesso Restrito)")
@@ -505,10 +505,9 @@ elif st.session_state.modo_tela == "memoria":
     if senha_mem == SENHA_CRIADOR:
         cat = st.selectbox("Categoria", ["Novidade", "Produto/Link", "Informação Geral", "Regra de Resposta"])
         nota = st.text_area("O que a L.U.C.AI deve memorizar?")
-        if st.button("Salvar Manualmente", icon=":material/save:", help="Grava essa memória permanentemente"):
+        if st.button("Salvar Manualmente", icon=":material/save:"):
             if nota.strip():
                 banco_memoria.salvar_nota(cat, nota)
                 st.success("Salvo com sucesso!")
                 st.rerun()
         st.info(banco_memoria.buscar_todas_notas() or "Nenhuma memória extra salva.")
-
