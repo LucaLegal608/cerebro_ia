@@ -438,7 +438,7 @@ def tela_creditos():
                 st.success(f"+{qtd_add} créditos gratuitos enviados para @{u_alvo.strip()}!")
 
 def tela_configuracoes():
-   if st.session_state.modo_tela == "chat":
+ if st.session_state.modo_tela == "chat":
     conv = st.session_state.conversas[st.session_state.conversa_atual]
     for idx, msg in enumerate(conv["mensagens"]):
         with st.chat_message(msg["role"], avatar=":material/memory:" if msg["role"] == "assistant" else ":material/person:"):
@@ -467,6 +467,7 @@ elif st.session_state.modo_tela == "configuracoes":
 elif st.session_state.modo_tela == "compartilhar":
     st.subheader("Compartilhar L.U.C.AI")
     st.code("https://streamlit.app", language="text")
+
 
 elif st.session_state.modo_tela == "contas":
     st.subheader("Contas L.U.C.AI")
