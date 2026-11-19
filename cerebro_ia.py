@@ -75,6 +75,14 @@ def excluir_conversa(id_conv):
     else:
         st.session_state.conversas[id_conv] = {"titulo": "Nova conversa", "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]}
 
+def gerar_texto_exportacao():
+    conv = st.session_state.conversas[st.session_state.conversa_atual]
+    linhas = [f"=== HISTÓRICO L.U.C.AI ({VERSAO_IA}) - {conv['titulo']} ===\n"]
+    for m in conv["mensagens"]:
+        quem = "L.U.C.AI" if m["role"] == "assistant" else "Você"
+        linhas.append(f"[{quem}]:\n{m['content']}\n")
+    return "\n".join(linhas)
+
 st.markdown("""
 <style>
     @import url('https://googleapis.com');
@@ -99,7 +107,7 @@ st.markdown("""
         .block-container { padding-top: 2.8rem !important; padding-left: 0.8rem !important; padding-right: 0.8rem !important; }
     }
 
-    .stButton > button, [data-testid="stFormSubmitButton"] > button {
+    .stButton > button, [data-testid="stFormSubmitButton"] > button, [data-testid="stDownloadButton"] > button {
         border-radius: 14px !important;
         border: 1.5px solid #00B4D8 !important;
         font-weight: 600 !important;
@@ -113,13 +121,13 @@ st.markdown("""
     .stButton > button[kind="primary"] p, .stButton > button[kind="primary"] span, [data-testid="stFormSubmitButton"] > button[kind="primary"] p {
         color: #FFFFFF !important;
     }
-    .stButton > button:hover, .stButton > button:active, [data-testid="stFormSubmitButton"] > button:hover {
+    .stButton > button:hover, .stButton > button:active, [data-testid="stFormSubmitButton"] > button:hover, [data-testid="stDownloadButton"] > button:hover {
         background: #00E5FF !important;
         border-color: #00B8D4 !important;
         color: #050B14 !important;
         box-shadow: 0 0 18px rgba(0, 229, 255, 0.85) !important;
     }
-    .stButton > button:hover p, .stButton > button:hover span, [data-testid="stFormSubmitButton"] > button:hover p {
+    .stButton > button:hover p, .stButton > button:hover span, [data-testid="stFormSubmitButton"] > button:hover p, [data-testid="stDownloadButton"] > button:hover p {
         color: #050B14 !important;
     }
 
@@ -228,10 +236,11 @@ with st.sidebar:
             st.rerun()
 
     st.divider()
-    if st.button("⋮", key="btn_tres_pontos"):
+    if st.button("⋮", key="btn_tres_pontos", help="Configurações"):
         st.session_state.menu_aberto = not st.session_state.menu_aberto
 
     if st.session_state.menu_aberto:
+        st.caption("Navegação e Conta")
         if st.button("Chat Principal", icon=":material/chat:", use_container_width=True):
             st.session_state.modo_tela = "chat"
             st.session_state.menu_aberto = False
@@ -244,6 +253,27 @@ with st.sidebar:
             st.session_state.modo_tela = "feedback"
             st.session_state.menu_aberto = False
             st.rerun()
+
+        st.divider()
+        st.caption("Ferramentas do Chat")
+        st.download_button(
+            label="Baixar Conversa (.txt)",
+            data=gerar_texto_exportacao(),
+            file_name="conversa_lucai.txt",
+            mime="text/plain",
+            icon=":material/download:",
+            use_container_width=True
+        )
+        if st.button("Limpar Chat Atual", icon=":material/mop:", use_container_width=True):
+            id_at = st.session_state.conversa_atual
+            st.session_state.conversas[id_at] = {"titulo": "Nova conversa", "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]}
+            st.session_state.menu_aberto = False
+            st.rerun()
+        if st.button("Compartilhar L.U.C.AI", icon=":material/share:", use_container_width=True):
+            st.session_state.modo_tela = "compartilhar"
+            st.session_state.menu_aberto = False
+            st.rerun()
+
         st.divider()
         st.caption("Área Restrita (Criador)")
         if st.button("Estúdio do Criador", icon=":material/movie_edit:", use_container_width=True):
@@ -319,6 +349,11 @@ if st.session_state.modo_tela == "chat":
         processar_envio_publico(prompt_pub, modo_escolhido, busca_web_ativa)
         st.rerun()
 
+elif st.session_state.modo_tela == "compartilhar":
+    st.subheader("Compartilhar L.U.C.AI")
+    st.write("Copie o link abaixo para enviar a **L.U.C.AI v2.0** para seus amigos ou colocar na descrição dos seus vídeos:")
+    st.code("https://streamlit.app", language="text")
+
 elif st.session_state.modo_tela == "contas":
     st.subheader("Contas L.U.C.AI")
     if st.session_state.usuario_logado:
@@ -355,23 +390,3 @@ elif st.session_state.modo_tela == "contas":
                         try:
                             conn = sqlite3.connect("memoria.db")
                             conn.execute("INSERT INTO usuarios VALUES (?, ?, ?)", (u_cad.strip(), s_cad.strip(), n_cad.strip()))
-                            conn.commit()
-                            conn.close()
-                            st.session_state.usuario_logado = {"usuario": u_cad.strip(), "nome": n_cad.strip()}
-                            st.query_params["sessao"] = u_cad.strip()
-                            st.session_state.modo_tela = "chat"
-                            st.rerun()
-                        except sqlite3.IntegrityError:
-                            st.error("Esse nome de usuário já existe. Escolha outro.")
-                    else:
-                        st.warning("Preencha todos os campos.")
-
-elif st.session_state.modo_tela == "feedback":
-    st.subheader("Enviar Feedback para o Criador")
-    with st.form("form_feedback"):
-        nome_padrao = st.session_state.usuario_logado["nome"] if st.session_state.usuario_logado else ""
-        autor_fb = st.text_input("Seu nome (opcional):", value=nome_padrao)
-        msg_fb = st.text_area("Sua mensagem ou sugestão:")
-        if st.form_submit_button("Enviar Feedback", type="primary"):
-            if msg_fb.strip():
-                conn = sqlite3.connect("memoria.db")
