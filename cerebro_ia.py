@@ -374,8 +374,8 @@ elif st.session_state.modo_tela == "contas":
                     res = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=? AND senha=?", (u_login.strip(), s_login.strip())).fetchone()
                     conn.close()
                     if res:
-                        st.session_state.usuario_logado = {"usuario": res[0], "nome": res[1]}
-                        st.query_params["sessao"] = res[0]
+                        st.session_state.usuario_logado = {"usuario": res, "nome": res}
+                        st.query_params["sessao"] = res
                         st.session_state.modo_tela = "chat"
                         st.rerun()
                     else:
@@ -387,6 +387,82 @@ elif st.session_state.modo_tela == "contas":
                 s_cad = st.text_input("Crie uma senha:", type="password")
                 if st.form_submit_button("Criar Conta e Desbloquear v2.0", type="primary"):
                     if n_cad.strip() and u_cad.strip() and s_cad.strip():
-                        try:
-                            conn = sqlite3.connect("memoria.db")
-        conn.execute("INSERT INTO usuarios VALUES (?, ?, ?)", (u_cad.strip(), s_cad.strip(), n_cad.strip()))
+                        conn = sqlite3.connect("memoria.db")
+                        ja_existe = conn.execute("SELECT usuario FROM usuarios WHERE usuario=?", (u_cad.strip(),)).fetchone()
+                        if ja_existe:
+                            conn.close()
+                            st.error("Esse nome de usuário já existe. Escolha outro.")
+                        else:
+                            conn.execute("INSERT INTO usuarios VALUES (?, ?, ?)", (u_cad.strip(), s_cad.strip(), n_cad.strip()))
+                            conn.commit()
+                            conn.close()
+                            st.session_state.usuario_logado = {"usuario": u_cad.strip(), "nome": n_cad.strip()}
+                            st.query_params["sessao"] = u_cad.strip()
+                            st.session_state.modo_tela = "chat"
+                            st.rerun()
+                    else:
+                        st.warning("Preencha todos os campos.")
+
+elif st.session_state.modo_tela == "feedback":
+    st.subheader("Enviar Feedback para o Criador")
+    with st.form("form_feedback"):
+        nome_padrao = st.session_state.usuario_logado["nome"] if st.session_state.usuario_logado else ""
+        autor_fb = st.text_input("Seu nome (opcional):", value=nome_padrao)
+        msg_fb = st.text_area("Sua mensagem ou sugestão:")
+        if st.form_submit_button("Enviar Feedback", type="primary"):
+            if msg_fb.strip():
+                conn = sqlite3.connect("memoria.db")
+                conn.execute("INSERT INTO feedbacks (autor, mensagem, data) VALUES (?, ?, ?)", (autor_fb.strip() or "Anônimo", msg_fb.strip(), obter_data_hora_atual()))
+                conn.commit()
+                conn.close()
+                st.success("Feedback enviado com sucesso!")
+            else:
+                st.warning("Escreva uma mensagem antes de enviar.")
+
+elif st.session_state.modo_tela == "ver_feedbacks":
+    st.subheader("Feedbacks Recebidos (Acesso Restrito)")
+    senha_fb = st.text_input("Código de acesso:", type="password", key="pwd_fb")
+    if senha_fb == SENHA_CRIADOR:
+        conn = sqlite3.connect("memoria.db")
+        lista_fb = conn.execute("SELECT id, autor, mensagem, data FROM feedbacks ORDER BY id DESC").fetchall()
+        conn.close()
+        if not lista_fb:
+            st.info("Nenhum feedback recebido ainda.")
+        for item in lista_fb:
+            st.markdown(f"**#{item} • {item}** *({item})*")
+            st.info(item)
+
+elif st.session_state.modo_tela == "estudio":
+    st.subheader("Estúdio do Criador (Acesso Restrito)")
+    senha_est = st.text_input("Código de acesso:", type="password", key="pwd_est")
+    if senha_est == SENHA_CRIADOR:
+        st.success("Acesso autorizado, Luca!")
+        if "hist_copiloto" not in st.session_state:
+            st.session_state.hist_copiloto = []
+        for msg in st.session_state.hist_copiloto:
+            with st.chat_message(msg["role"], avatar=":material/movie_edit:" if msg["role"] == "assistant" else ":material/person:"):
+                st.markdown(msg["content"])
+        if prompt_yt := st.chat_input("Peça roteiros ou salve na memória...", key="in_yt"):
+            st.session_state.hist_copiloto.append({"role": "user", "content": prompt_yt})
+            inst_yt = f"Você é a L.U.C.AI ({VERSAO_IA}) operando para o criador Luca Legal. Se pedir para salvar/lembrar algo, inclua no final: [SALVAR_MEMORIA: texto]. DNA: {ler_dna_criador()}. MEMÓRIAS: {banco_memoria.buscar_todas_notas()}"
+            resp = gerar_resposta(prompt_yt, st.session_state.hist_copiloto[:-1], inst_yt, 0.7)
+            match = re.search(r"\[SALVAR_MEMORIA:\s*(.*?)\]", resp, re.DOTALL)
+            if match:
+                txt = match.group(1).strip()
+                banco_memoria.salvar_nota("Atualização via Chat", txt)
+                resp = re.sub(r"\[SALVAR_MEMORIA:.*?\]", "", resp, flags=re.DOTALL).strip() + f"\n\n*Salvo na memória:* `{txt}`"
+            st.session_state.hist_copiloto.append({"role": "assistant", "content": resp})
+            st.rerun()
+
+elif st.session_state.modo_tela == "memoria":
+    st.subheader("Banco de Dados (Acesso Restrito)")
+    senha_mem = st.text_input("Código de acesso:", type="password", key="pwd_mem")
+    if senha_mem == SENHA_CRIADOR:
+        cat = st.selectbox("Categoria", ["Novidade", "Produto/Link", "Informação Geral", "Regra de Resposta"])
+        nota = st.text_area("O que a L.U.C.AI deve memorizar?")
+        if st.button("Salvar Manualmente", icon=":material/save:", type="primary"):
+            if nota.strip():
+                banco_memoria.salvar_nota(cat, nota)
+                st.success("Salvo com sucesso!")
+                st.rerun()
+        st.info(banco_memoria.buscar_todas_notas() or "Nenhuma memória extra salva.")
