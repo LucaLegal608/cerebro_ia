@@ -377,7 +377,7 @@ elif st.session_state.modo_tela == "arquivo":
         prompt_completo = f"{pedido_arq}\n\n--- CONTEÚDO DO ARQUIVO ({arq.name}) ---\n{conteudo_arq}"
         processar_envio_publico(prompt_completo, "Equilibrada", False)
         st.session_state.modo_tela = "chat"
-                      with aba_criar:
+        with aba_criar:
             with st.form("form_cadastro"):
                 n_cad = st.text_input("Seu nome:")
                 u_cad = st.text_input("Escolha um usuário (sem espaços):")
