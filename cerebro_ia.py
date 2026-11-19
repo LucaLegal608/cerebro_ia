@@ -58,6 +58,9 @@ if "conversas" not in st.session_state:
 if "modo_tela" not in st.session_state:
     st.session_state.modo_tela = "chat"
 
+if "menu_aberto" not in st.session_state:
+    st.session_state.menu_aberto = False
+
 def criar_nova_conversa():
     nid = str(uuid.uuid4())
     st.session_state.conversas[nid] = {"titulo": "Nova conversa", "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]}
@@ -225,26 +228,35 @@ with st.sidebar:
             st.rerun()
 
     st.divider()
-    with st.expander("⋮"):
+    if st.button("⋮", key="btn_tres_pontos"):
+        st.session_state.menu_aberto = not st.session_state.menu_aberto
+
+    if st.session_state.menu_aberto:
         if st.button("Chat Principal", icon=":material/chat:", use_container_width=True):
             st.session_state.modo_tela = "chat"
+            st.session_state.menu_aberto = False
             st.rerun()
         if st.button("Contas (Login)", icon=":material/account_circle:", use_container_width=True):
             st.session_state.modo_tela = "contas"
+            st.session_state.menu_aberto = False
             st.rerun()
         if st.button("Enviar Feedback", icon=":material/rate_review:", use_container_width=True):
             st.session_state.modo_tela = "feedback"
+            st.session_state.menu_aberto = False
             st.rerun()
         st.divider()
         st.caption("Área Restrita (Criador)")
         if st.button("Estúdio do Criador", icon=":material/movie_edit:", use_container_width=True):
             st.session_state.modo_tela = "estudio"
+            st.session_state.menu_aberto = False
             st.rerun()
         if st.button("Banco de Dados", icon=":material/database:", use_container_width=True):
             st.session_state.modo_tela = "memoria"
+            st.session_state.menu_aberto = False
             st.rerun()
         if st.button("Ler Feedbacks", icon=":material/inbox:", use_container_width=True):
             st.session_state.modo_tela = "ver_feedbacks"
+            st.session_state.menu_aberto = False
             st.rerun()
 
     st.divider()
@@ -363,12 +375,3 @@ elif st.session_state.modo_tela == "feedback":
         if st.form_submit_button("Enviar Feedback", type="primary"):
             if msg_fb.strip():
                 conn = sqlite3.connect("memoria.db")
-                conn.execute("INSERT INTO feedbacks (autor, mensagem, data) VALUES (?, ?, ?)", (autor_fb.strip() or "Anônimo", msg_fb.strip(), obter_data_hora_atual()))
-                conn.commit()
-                conn.close()
-                st.success("Feedback enviado com sucesso!")
-            else:
-                st.warning("Escreva uma mensagem antes de enviar.")
-
-elif st.session_state.modo_tela == "ver_feedbacks":
-    st.subheader("Feedbacks Recebidos (Acesso Restrito)")
