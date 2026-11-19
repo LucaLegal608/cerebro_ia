@@ -76,29 +76,16 @@ st.markdown("""
 <style>
     @import url('https://googleapis.com');
     
-    /* MODO ESCURO UNIFICADO (100% PRETO/GRAFITE + LETRAS BRANCAS) */
-    :root { color-scheme: dark !important; }
-    html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
-        background-color: #0B0F19 !important;
-        color: #FFFFFF !important;
+    html, body, .stApp {
         font-family: 'Plus Jakarta Sans', sans-serif !important;
     }
-    section[data-testid="stSidebar"], section[data-testid="stSidebar"] > div {
-        background-color: #111827 !important;
-        border-right: 1px solid #1E293B !important;
-        color: #FFFFFF !important;
-    }
-    p, span, div, label, h1, h2, h3, h4, h5, li, small {
-        color: #FFFFFF !important;
-    }
 
-    /* Cabeçalho responsivo */
-    .gemini-header { display: flex; align-items: center; gap: 14px; padding: 0.5rem 0.2rem 0.9rem 0.2rem; margin-bottom: 0.8rem; border-bottom: 1px solid #1E293B; }
-    .chip-emblem { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #0284C7 0%, #38BDF8 50%, #7C3AED 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 18px rgba(0, 229, 255, 0.45); flex-shrink: 0; }
-    .gemini-title { font-size: 1.95rem; font-weight: 700; background: linear-gradient(90deg, #38BDF8 0%, #00F3FF 50%, #C084FC 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent !important; display: inline-block; margin: 0; line-height: 1.2; }
-    .gemini-sigla { font-size: 0.98rem; color: #CBD5E1 !important; font-weight: 500; margin-left: 6px; }
-    .badge-v2 { background-color: rgba(0, 229, 255, 0.15) !important; color: #00F3FF !important; border: 1px solid #00E5FF !important; font-size: 0.74rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; vertical-align: middle; margin-left: 8px; }
-    .gemini-subtitle { color: #94A3B8 !important; font-size: 0.92rem; margin-top: 0.2rem; }
+    .gemini-header { display: flex; align-items: center; gap: 14px; padding: 0.5rem 0.2rem 0.9rem 0.2rem; margin-bottom: 0.8rem; border-bottom: 1px solid rgba(128, 128, 128, 0.25); }
+    .chip-emblem { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #0284C7 0%, #38BDF8 50%, #7C3AED 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0, 229, 255, 0.35); flex-shrink: 0; }
+    .gemini-title { font-size: 1.95rem; font-weight: 700; background: linear-gradient(90deg, #0284C7 0%, #00B4D8 50%, #9333EA 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent !important; display: inline-block; margin: 0; line-height: 1.2; }
+    .gemini-sigla { font-size: 0.98rem; opacity: 0.8; font-weight: 500; margin-left: 6px; }
+    .badge-v2 { background-color: rgba(0, 229, 255, 0.15) !important; color: #00B4D8 !important; border: 1px solid #00B4D8 !important; font-size: 0.74rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; vertical-align: middle; margin-left: 8px; }
+    .gemini-subtitle { opacity: 0.8; font-size: 0.92rem; margin-top: 0.2rem; }
 
     @media (max-width: 768px) {
         .gemini-header { gap: 10px; padding-top: 0.2rem; }
@@ -109,43 +96,28 @@ st.markdown("""
         .block-container { padding-top: 2.8rem !important; padding-left: 0.8rem !important; padding-right: 0.8rem !important; }
     }
 
-    /* Todos os botões escuros com borda ciano e brilho intenso ao passar o mouse */
     .stButton > button, [data-testid="stFormSubmitButton"] > button {
         border-radius: 14px !important;
-        border: 1.5px solid #38BDF8 !important;
-        background-color: #161E31 !important;
-        color: #FFFFFF !important;
+        border: 1.5px solid #00B4D8 !important;
         font-weight: 600 !important;
         transition: all 0.2s ease-in-out !important;
     }
     .stButton > button:hover, .stButton > button:active, [data-testid="stFormSubmitButton"] > button:hover {
         background-color: #00E5FF !important;
-        border-color: #00F3FF !important;
+        border-color: #00B8D4 !important;
         color: #050B14 !important;
-        box-shadow: 0 0 20px rgba(0, 229, 255, 0.9) !important;
+        box-shadow: 0 0 18px rgba(0, 229, 255, 0.85) !important;
     }
     .stButton > button:hover p, .stButton > button:hover span, [data-testid="stFormSubmitButton"] > button:hover p {
         color: #050B14 !important;
     }
-    .stButton > button[kind="primary"], [data-testid="stFormSubmitButton"] > button[kind="primary"] {
-        background: linear-gradient(90deg, #0284C7 0%, #4F46E5 100%) !important;
-        border: 1.5px solid #00F3FF !important;
-    }
 
-    /* Caixas de texto, seletores, expander e balões do chat 100% escuros */
-    [data-testid="stChatMessage"], [data-testid="stExpander"], [data-baseweb="select"] > div, input, textarea {
-        background-color: #161E31 !important;
-        border: 1px solid #2D3B55 !important;
-        color: #FFFFFF !important;
-        border-radius: 14px !important;
-    }
-    [data-testid="stBottom"], [data-testid="stBottom"] > div {
-        background-color: #0B0F19 !important;
-        border-top: 1px solid #1E293B !important;
+    [data-testid="stChatMessage"] {
+        border-radius: 18px !important;
+        padding: 0.9rem 1rem !important;
+        margin-bottom: 0.65rem !important;
     }
     [data-testid="stChatInput"] {
-        background-color: #161E31 !important;
-        border: 2px solid #38BDF8 !important;
         border-radius: 22px !important;
     }
 </style>
