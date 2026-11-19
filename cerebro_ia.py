@@ -265,13 +265,7 @@ with st.sidebar:
             st.session_state.modo_tela = "arquivo"
             st.session_state.menu_aberto = False
             st.rerun()
-        st.download_button(
-            label="Baixar Conversa (.txt)",
-            data=gerar_texto_exportacao(),
-            file_name="conversa_lucai.txt",
-            mime="text/plain",
-            icon=":material/download:",
-            use_container_width=True
+    
         )
         if st.button("Compartilhar L.U.C.AI", icon=":material/share:", use_container_width=True):
             st.session_state.modo_tela = "compartilhar"
