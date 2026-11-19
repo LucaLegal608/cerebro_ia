@@ -389,4 +389,4 @@ elif st.session_state.modo_tela == "contas":
                     if n_cad.strip() and u_cad.strip() and s_cad.strip():
                         try:
                             conn = sqlite3.connect("memoria.db")
-                            conn.execute("INSERT INTO usuarios VALUES (?, ?, ?)", (u_cad.strip(), s_cad.strip(), n_cad.strip()))
+        conn.execute("INSERT INTO usuarios VALUES (?, ?, ?)", (u_cad.strip(), s_cad.strip(), n_cad.strip()))
