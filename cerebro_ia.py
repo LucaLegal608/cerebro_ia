@@ -343,7 +343,7 @@ with st.sidebar:
             st.session_state.modo_tela = "chat"
             st.session_state.menu_aberto = False
             st.rerun()
-        if st.button("Loja de Créditos ⚡", icon=":material/shopping_cart:", use_container_width=True, help="Comprar pacotes de créditos ou ativar código pago"):
+        if st.button("Resgatar Créditos", icon=":material/shopping_cart:", use_container_width=True, help="Comprar pacotes de créditos ou ativar código pago"):
             st.session_state.modo_tela = "creditos"
             st.session_state.menu_aberto = False
             st.rerun()
