@@ -4,6 +4,8 @@ import json
 import time
 import uuid
 import sqlite3
+import urllib.parse
+import requests
 from datetime import datetime, timezone, timedelta
 from groq import Groq
 import streamlit as st
