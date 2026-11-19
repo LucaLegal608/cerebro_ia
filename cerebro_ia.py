@@ -18,12 +18,6 @@ try:
 except ImportError:
     TEM_BUSCA = False
 
-try:
-    from pypdf import PdfReader
-    TEM_PDF = True
-except ImportError:
-    TEM_PDF = False
-
 st.set_page_config(page_title="L.U.C.AI (v3.2) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
 banco_memoria.iniciar_banco()
 
@@ -383,8 +377,7 @@ if st.session_state.modo_tela != "chat":
         st.session_state.modo_tela = "chat"
         st.rerun()
 
-def tela_creditos():
-   if st.session_state.modo_tela == "chat":
+if st.session_state.modo_tela == "chat":
     conv = st.session_state.conversas[st.session_state.conversa_atual]
     for idx, msg in enumerate(conv["mensagens"]):
         with st.chat_message(msg["role"], avatar=":material/memory:" if msg["role"] == "assistant" else ":material/person:"):
@@ -410,17 +403,21 @@ elif st.session_state.modo_tela == "creditos":
 elif st.session_state.modo_tela == "configuracoes":
     telas_extras.exibir_tela_configuracoes(ler_memorias_usuario, criar_nova_conversa)
 
+elif st.session_state.modo_tela == "compartilhar":
+    st.subheader("Compartilhar L.U.C.AI")
+    st.code("https://streamlit.app", language="text")
 
-def tela_configuracoes():
-elif st.session_state.modo_tela == "creditos":
-    telas_extras.exibir_tela_creditos(obter_creditos, alterar_creditos, SENHA_CRIADOR)
-
-elif st.session_state.modo_tela == "configuracoes":
-    telas_extras.exibir_tela_configuracoes(ler_memorias_usuario, criar_nova_conversa)
-
+elif st.session_state.modo_tela == "contas":
+    st.subheader("Contas L.U.C.AI")
+    if st.session_state.usuario_logado:
+        st.success(f"Conectado como **{st.session_state.usuario_logado['nome']}** (`@{st.session_state.usuario_logado['usuario']}`).")
+        if st.button("Sair da Conta (Logout)", icon=":material/logout:", help="Desconecta sua conta"):
+            st.session_state.usuario_logado = None
+            st.query_params.clear()
+            st.session_state.modo_tela = "chat"
             st.rerun()
     else:
-        aba_entrar, aba_criar = st.tabs(["Entrar na Conta", "Criar Conta Gratuita (+10 Créditos Grátis)"])
+              aba_entrar, aba_criar = st.tabs(["Entrar na Conta", "Criar Conta Gratuita (+10 Créditos)"])
         with aba_entrar:
             with st.form("form_login"):
                 u_login = st.text_input("Nome de usuário:")
@@ -430,8 +427,8 @@ elif st.session_state.modo_tela == "configuracoes":
                     res = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=? AND senha=?", (u_login.strip(), s_login.strip())).fetchone()
                     conn.close()
                     if res:
-                        st.session_state.usuario_logado = {"usuario": res, "nome": res}
-                        st.query_params["sessao"] = res
+                        st.session_state.usuario_logado = {"usuario": res[0], "nome": res[1]}
+                        st.query_params["sessao"] = res[0]
                         st.session_state.modo_tela = "chat"
                         st.rerun()
                     else:
@@ -477,8 +474,8 @@ elif st.session_state.modo_tela == "ver_feedbacks":
         lista_fb = conn.execute("SELECT id, autor, mensagem, data FROM feedbacks ORDER BY id DESC").fetchall()
         conn.close()
         for item in lista_fb:
-            st.markdown(f"**#{item} • {item}** *({item})*")
-            st.info(item)
+            st.markdown(f"**#{item[0]} • {item[1]}** *({item[3]})*")
+            st.info(item[2])
 
 elif st.session_state.modo_tela == "estudio":
     st.subheader("Estúdio do Criador (Acesso Restrito)")
@@ -514,3 +511,4 @@ elif st.session_state.modo_tela == "memoria":
                 st.success("Salvo com sucesso!")
                 st.rerun()
         st.info(banco_memoria.buscar_todas_notas() or "Nenhuma memória extra salva.")
+
