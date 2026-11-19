@@ -75,14 +75,6 @@ def excluir_conversa(id_conv):
     else:
         st.session_state.conversas[id_conv] = {"titulo": "Nova conversa", "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]}
 
-def gerar_texto_exportacao():
-    conv = st.session_state.conversas[st.session_state.conversa_atual]
-    linhas = [f"=== HISTÓRICO L.U.C.AI ({VERSAO_IA}) - {conv['titulo']} ===\n"]
-    for m in conv["mensagens"]:
-        quem = "L.U.C.AI" if m["role"] == "assistant" else "Você"
-        linhas.append(f"[{quem}]:\n{m['content']}\n")
-    return "\n".join(linhas)
-
 st.markdown("""
 <style>
     @import url('https://googleapis.com');
@@ -107,7 +99,7 @@ st.markdown("""
         .block-container { padding-top: 2.8rem !important; padding-left: 0.8rem !important; padding-right: 0.8rem !important; }
     }
 
-    .stButton > button, [data-testid="stFormSubmitButton"] > button, [data-testid="stDownloadButton"] > button {
+    .stButton > button, [data-testid="stFormSubmitButton"] > button {
         border-radius: 14px !important;
         border: 1.5px solid #00B4D8 !important;
         font-weight: 600 !important;
@@ -121,13 +113,13 @@ st.markdown("""
     .stButton > button[kind="primary"] p, .stButton > button[kind="primary"] span, [data-testid="stFormSubmitButton"] > button[kind="primary"] p {
         color: #FFFFFF !important;
     }
-    .stButton > button:hover, .stButton > button:active, [data-testid="stFormSubmitButton"] > button:hover, [data-testid="stDownloadButton"] > button:hover {
+    .stButton > button:hover, .stButton > button:active, [data-testid="stFormSubmitButton"] > button:hover {
         background: #00E5FF !important;
         border-color: #00B8D4 !important;
         color: #050B14 !important;
         box-shadow: 0 0 18px rgba(0, 229, 255, 0.85) !important;
     }
-    .stButton > button:hover p, .stButton > button:hover span, [data-testid="stFormSubmitButton"] > button:hover p, [data-testid="stDownloadButton"] > button:hover p {
+    .stButton > button:hover p, .stButton > button:hover span, [data-testid="stFormSubmitButton"] > button:hover p {
         color: #050B14 !important;
     }
 
@@ -215,7 +207,7 @@ with st.sidebar:
 
     if st.session_state.usuario_logado:
         st.success(f"Conectado: **{st.session_state.usuario_logado['nome']}**")
-        if st.button("Nova conversa", icon=":material/add_comment:", use_container_width=True, type="primary"):
+        if st.button("Nova conversa", icon=":material/add_comment:", use_container_width=True, type="primary", help="Inicia um novo bate-papo do zero"):
             criar_nova_conversa()
             st.rerun()
         st.markdown("##### Recentes")
@@ -223,16 +215,16 @@ with st.sidebar:
             dados = st.session_state.conversas[id_conv]
             c_tit, c_del = st.columns([0.80, 0.20])
             icone_chat = ":material/chat:" if id_conv == st.session_state.conversa_atual else ":material/chat_bubble_outline:"
-            if c_tit.button(dados["titulo"], icon=icone_chat, key=f"btn_{id_conv}", use_container_width=True):
+            if c_tit.button(dados["titulo"], icon=icone_chat, key=f"btn_{id_conv}", use_container_width=True, help="Abrir esta conversa salva"):
                 st.session_state.conversa_atual = id_conv
                 st.session_state.modo_tela = "chat"
                 st.rerun()
-            if c_del.button("", icon=":material/delete:", key=f"del_{id_conv}"):
+            if c_del.button("", icon=":material/delete:", key=f"del_{id_conv}", help="Apagar esta conversa permanentemente"):
                 excluir_conversa(id_conv)
                 st.rerun()
     else:
         st.info("Modo Visitante (Simplificado)")
-        if st.button("Entrar / Criar Conta", icon=":material/login:", use_container_width=True, type="primary"):
+        if st.button("Entrar / Criar Conta", icon=":material/login:", use_container_width=True, type="primary", help="Faça login ou crie uma conta gratuita para desbloquear todos os recursos"):
             st.session_state.modo_tela = "contas"
             st.rerun()
 
@@ -242,46 +234,45 @@ with st.sidebar:
 
     if st.session_state.menu_aberto:
         st.caption("Navegação e Conta")
-        if st.button("Chat Principal", icon=":material/chat:", use_container_width=True):
+        if st.button("Chat Principal", icon=":material/chat:", use_container_width=True, help="Voltar para a tela principal de conversa com a IA"):
             st.session_state.modo_tela = "chat"
             st.session_state.menu_aberto = False
             st.rerun()
-        if st.button("Contas (Login)", icon=":material/account_circle:", use_container_width=True):
+        if st.button("Contas (Login)", icon=":material/account_circle:", use_container_width=True, help="Gerenciar sua conta, entrar ou criar um novo cadastro"):
             st.session_state.modo_tela = "contas"
             st.session_state.menu_aberto = False
             st.rerun()
-        if st.button("Enviar Feedback", icon=":material/rate_review:", use_container_width=True):
+        if st.button("Enviar Feedback", icon=":material/rate_review:", use_container_width=True, help="Enviar uma sugestão, elogio ou relatar erro ao criador"):
             st.session_state.modo_tela = "feedback"
             st.session_state.menu_aberto = False
             st.rerun()
 
         st.divider()
         st.caption("Recursos da L.U.C.AI")
-        if st.button("Instruções Personalizadas", icon=":material/tune:", use_container_width=True):
+        if st.button("Instruções Personalizadas", icon=":material/tune:", use_container_width=True, help="Configurar como você quer que a L.U.C.AI responda a você"):
             st.session_state.modo_tela = "instrucoes"
             st.session_state.menu_aberto = False
             st.rerun()
-        if st.button("Ler Arquivo / Código", icon=":material/upload_file:", use_container_width=True):
+        if st.button("Ler Arquivo / Código", icon=":material/upload_file:", use_container_width=True, help="Enviar um documento ou código para a IA analisar e resumir"):
             st.session_state.modo_tela = "arquivo"
             st.session_state.menu_aberto = False
             st.rerun()
-    
-        if st.button("Compartilhar L.U.C.AI", icon=":material/share:", use_container_width=True):
+        if st.button("Compartilhar L.U.C.AI", icon=":material/share:", use_container_width=True, help="Copiar o link oficial da L.U.C.AI para enviar a outras pessoas"):
             st.session_state.modo_tela = "compartilhar"
             st.session_state.menu_aberto = False
             st.rerun()
 
         st.divider()
         st.caption("Área Restrita (Criador)")
-        if st.button("Estúdio do Criador", icon=":material/movie_edit:", use_container_width=True):
+        if st.button("Estúdio do Criador", icon=":material/movie_edit:", use_container_width=True, help="Painel exclusivo para roteiros e treinamento por conversa"):
             st.session_state.modo_tela = "estudio"
             st.session_state.menu_aberto = False
             st.rerun()
-        if st.button("Banco de Dados", icon=":material/database:", use_container_width=True):
+        if st.button("Banco de Dados", icon=":material/database:", use_container_width=True, help="Gerenciar regras e memórias permanentes da L.U.C.AI"):
             st.session_state.modo_tela = "memoria"
             st.session_state.menu_aberto = False
             st.rerun()
-        if st.button("Ler Feedbacks", icon=":material/inbox:", use_container_width=True):
+        if st.button("Ler Feedbacks", icon=":material/inbox:", use_container_width=True, help="Visualizar todas as mensagens enviadas pelos usuários"):
             st.session_state.modo_tela = "ver_feedbacks"
             st.session_state.menu_aberto = False
             st.rerun()
@@ -308,31 +299,31 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 if st.session_state.modo_tela != "chat":
-    if st.button("Voltar ao Chat", icon=":material/arrow_back:"):
+    if st.button("Voltar ao Chat", icon=":material/arrow_back:", help="Retornar para a conversa principal"):
         st.session_state.modo_tela = "chat"
         st.rerun()
 
 if st.session_state.modo_tela == "chat":
     col_pers, col_web = st.columns([0.62, 0.38])
     with col_pers:
-        modo_escolhido = st.selectbox("Personalidade:", ["Equilibrada", "Professor Didático", "Criativa", "Ultra-Curta"], label_visibility="collapsed")
+        modo_escolhido = st.selectbox("Personalidade:", ["Equilibrada", "Professor Didático", "Criativa", "Ultra-Curta"], label_visibility="collapsed", help="Escolha o estilo de resposta da IA")
     with col_web:
-        busca_web_ativa = st.toggle("Pesquisar na Web", value=True)
+        busca_web_ativa = st.toggle("Pesquisar na Web", value=True, help="Ativa ou desativa a busca de notícias e dados em tempo real na internet")
 
     conv = st.session_state.conversas[st.session_state.conversa_atual]
     if st.session_state.usuario_logado and len(conv["mensagens"]) == 1:
         st.caption("Sugestões completas desbloqueadas:")
         c1, c2, c3, c4 = st.columns(4)
-        if c1.button("Notícias de hoje", icon=":material/newspaper:", use_container_width=True):
+        if c1.button("Notícias de hoje", icon=":material/newspaper:", use_container_width=True, help="Busca os principais acontecimentos de hoje na internet"):
             processar_envio_publico("Quais são as principais notícias de hoje no Brasil e no mundo?", modo_escolhido, True)
             st.rerun()
-        if c2.button("Criar um código", icon=":material/code:", use_container_width=True):
+        if c2.button("Criar um código", icon=":material/code:", use_container_width=True, help="Pede ajuda para escrever ou corrigir programação"):
             processar_envio_publico("Quero ajuda para criar ou entender um código de programação.", modo_escolhido, busca_web_ativa)
             st.rerun()
-        if c3.button("Me ajude a estudar", icon=":material/school:", use_container_width=True):
+        if c3.button("Me ajude a estudar", icon=":material/school:", use_container_width=True, help="Cria resumos e explicações fáceis sobre qualquer matéria"):
             processar_envio_publico("Me ajude a estudar e resumir um assunto importante hoje!", modo_escolhido, busca_web_ativa)
             st.rerun()
-        if c4.button("Ideias criativas", icon=":material/lightbulb:", use_container_width=True):
+        if c4.button("Ideias criativas", icon=":material/lightbulb:", use_container_width=True, help="Gera sugestões criativas para projetos, vídeos ou textos"):
             processar_envio_publico("Preciso de ideias criativas para um projeto novo!", modo_escolhido, busca_web_ativa)
             st.rerun()
     elif not st.session_state.usuario_logado:
@@ -349,14 +340,14 @@ if st.session_state.modo_tela == "chat":
 elif st.session_state.modo_tela == "compartilhar":
     st.subheader("Compartilhar L.U.C.AI")
     st.write("Copie o link oficial abaixo para enviar a **L.U.C.AI v2.0** para seus amigos ou colocar na descrição dos seus vídeos:")
-    st.code("https://lucaioficial.streamlit.app/", language="text")
+    st.code("https://streamlit.app", language="text")
 
 elif st.session_state.modo_tela == "instrucoes":
     st.subheader("Instruções Personalizadas")
     st.caption("Diga à L.U.C.AI o que você gostaria que ela soubesse sobre você ou como prefere as respostas.")
     inst_atual = st.session_state.get("inst_usuario", "")
     nova_inst = st.text_area("Suas preferências (ex: 'Gosto de respostas diretas e estou estudando Python'):", value=inst_atual)
-    if st.button("Salvar Preferências", icon=":material/check:", type="primary"):
+    if st.button("Salvar Preferências", icon=":material/check:", type="primary", help="Salva suas instruções para todas as próximas respostas"):
         st.session_state.inst_usuario = nova_inst.strip()
         st.success("Instruções salvas! A L.U.C.AI já vai aplicar isso nas próximas respostas.")
 
@@ -364,96 +355,3 @@ elif st.session_state.modo_tela == "arquivo":
     st.subheader("Analisar Arquivo ou Código")
     st.caption("Envie um arquivo (.txt, .py, .md, .csv, .html, .json) para a L.U.C.AI resumir, revisar ou explicar.")
     arq = st.file_uploader("Escolha um arquivo:", type=["txt", "py", "md", "csv", "html", "json"])
-    pedido_arq = st.text_input("O que você quer que a L.U.C.AI faça com esse arquivo?", value="Resuma e explique os pontos principais deste arquivo:")
-    if arq is not None and st.button("Analisar Agora", icon=":material/auto_fix_high:", type="primary"):
-        conteudo_arq = arq.read().decode("utf-8", errors="ignore")[:8000]
-        prompt_completo = f"{pedido_arq}\n\n--- CONTEÚDO DO ARQUIVO ({arq.name}) ---\n{conteudo_arq}"
-        processar_envio_publico(prompt_completo, "Equilibrada", False)
-        st.session_state.modo_tela = "chat"
-        with aba_criar:
-            with st.form("form_cadastro"):
-                n_cad = st.text_input("Seu nome:")
-                u_cad = st.text_input("Escolha um usuário (sem espaços):")
-                s_cad = st.text_input("Crie uma senha:", type="password")
-                if st.form_submit_button("Criar Conta e Desbloquear v2.0", type="primary"):
-                    if n_cad.strip() and u_cad.strip() and s_cad.strip():
-                        conn = sqlite3.connect("memoria.db")
-                        ja_existe = conn.execute("SELECT usuario FROM usuarios WHERE usuario=?", (u_cad.strip(),)).fetchone()
-                        if ja_existe:
-                            conn.close()
-                            st.error("Esse nome de usuário já existe. Escolha outro.")
-                        else:
-                            conn.execute("INSERT INTO usuarios VALUES (?, ?, ?)", (u_cad.strip(), s_cad.strip(), n_cad.strip()))
-                            conn.commit()
-                            conn.close()
-                            st.session_state.usuario_logado = {"usuario": u_cad.strip(), "nome": n_cad.strip()}
-                            st.query_params["sessao"] = u_cad.strip()
-                            st.session_state.modo_tela = "chat"
-                            st.rerun()
-                    else:
-                        st.warning("Preencha todos os campos.")
-
-elif st.session_state.modo_tela == "feedback":
-    st.subheader("Enviar Feedback para o Criador")
-    with st.form("form_feedback"):
-        nome_padrao = st.session_state.usuario_logado["nome"] if st.session_state.usuario_logado else ""
-        autor_fb = st.text_input("Seu nome (opcional):", value=nome_padrao)
-        msg_fb = st.text_area("Sua mensagem ou sugestão:")
-        if st.form_submit_button("Enviar Feedback", type="primary"):
-            if msg_fb.strip():
-                conn = sqlite3.connect("memoria.db")
-                conn.execute("INSERT INTO feedbacks (autor, mensagem, data) VALUES (?, ?, ?)", (autor_fb.strip() or "Anônimo", msg_fb.strip(), obter_data_hora_atual()))
-                conn.commit()
-                conn.close()
-                st.success("Feedback enviado com sucesso!")
-            else:
-                st.warning("Escreva uma mensagem antes de enviar.")
-
-elif st.session_state.modo_tela == "ver_feedbacks":
-    st.subheader("Feedbacks Recebidos (Acesso Restrito)")
-    senha_fb = st.text_input("Código de acesso:", type="password", key="pwd_fb")
-    if senha_fb == SENHA_CRIADOR:
-        conn = sqlite3.connect("memoria.db")
-        lista_fb = conn.execute("SELECT id, autor, mensagem, data FROM feedbacks ORDER BY id DESC").fetchall()
-        conn.close()
-        if not lista_fb:
-            st.info("Nenhum feedback recebido ainda.")
-        for item in lista_fb:
-            st.markdown(f"**#{item[0]} • {item[1]}** *({item[3]})*")
-            st.info(item[2])
-
-elif st.session_state.modo_tela == "estudio":
-    st.subheader("Estúdio do Criador (Acesso Restrito)")
-    senha_est = st.text_input("Código de acesso:", type="password", key="pwd_est")
-    if senha_est == SENHA_CRIADOR:
-        st.success("Acesso autorizado, Luca!")
-        if "hist_copiloto" not in st.session_state:
-            st.session_state.hist_copiloto = []
-        for msg in st.session_state.hist_copiloto:
-            with st.chat_message(msg["role"], avatar=":material/movie_edit:" if msg["role"] == "assistant" else ":material/person:"):
-                st.markdown(msg["content"])
-        if prompt_yt := st.chat_input("Peça roteiros ou salve na memória...", key="in_yt"):
-            st.session_state.hist_copiloto.append({"role": "user", "content": prompt_yt})
-            inst_yt = f"Você é a L.U.C.AI ({VERSAO_IA}) operando para o criador Luca Legal. Se pedir para salvar/lembrar algo, inclua no final: [SALVAR_MEMORIA: texto]. DNA: {ler_dna_criador()}. MEMÓRIAS: {banco_memoria.buscar_todas_notas()}"
-            resp = gerar_resposta(prompt_yt, st.session_state.hist_copiloto[:-1], inst_yt, 0.7)
-            match = re.search(r"\[SALVAR_MEMORIA:\s*(.*?)\]", resp, re.DOTALL)
-            if match:
-                txt = match.group(1).strip()
-                banco_memoria.salvar_nota("Atualização via Chat", txt)
-                resp = re.sub(r"\[SALVAR_MEMORIA:.*?\]", "", resp, flags=re.DOTALL).strip() + f"\n\n*Salvo na memória:* `{txt}`"
-            st.session_state.hist_copiloto.append({"role": "assistant", "content": resp})
-            st.rerun()
-
-elif st.session_state.modo_tela == "memoria":
-    st.subheader("Banco de Dados (Acesso Restrito)")
-    senha_mem = st.text_input("Código de acesso:", type="password", key="pwd_mem")
-    if senha_mem == SENHA_CRIADOR:
-        cat = st.selectbox("Categoria", ["Novidade", "Produto/Link", "Informação Geral", "Regra de Resposta"])
-        nota = st.text_area("O que a L.U.C.AI deve memorizar?")
-        if st.button("Salvar Manualmente", icon=":material/save:", type="primary"):
-            if nota.strip():
-                banco_memoria.salvar_nota(cat, nota)
-                st.success("Salvo com sucesso!")
-                st.rerun()
-        st.info(banco_memoria.buscar_todas_notas() or "Nenhuma memória extra salva.")
-
