@@ -405,75 +405,59 @@ if st.session_state.modo_tela != "chat":
         st.rerun()
 
 def tela_creditos():
-    st.subheader("Loja de Créditos — L.U.C.AI ⚡")
+    st.subheader("Central de Créditos Gratuitos — L.U.C.AI ⚡")
     st.metric("Seu Saldo Atual", f"{obter_creditos()} créditos")
     st.caption("Consumo por uso: Mensagem = **1 ⚡** | Pesquisa Web / Arquivo = **2 ⚡** | Voz / Áudio = **3 ⚡**")
 
-    st.divider()
-    st.markdown("### Escolha seu Pacote de Créditos")
-    p1, p2, p3 = st.columns(3)
+    st.info("🎁 **Quer mais créditos grátis?** Peça um **Código de Recarga** diretamente para o criador **Luca Legal** (nos comentários do YouTube, redes sociais ou mensagem) e ative abaixo!")
 
-    with p1:
-        st.info("**Pacote Inicial**\n\n### +100 Créditos ⚡\n\n**R$ 9,90** *(pagamento único)*")
-        st.link_button("Comprar 100 ⚡ (R$ 9,90)", "https://mercadopago.com.br", use_container_width=True)
-
-    with p2:
-        st.success("**Pacote Criador (Mais Vendido)**\n\n### +350 Créditos ⚡\n\n**R$ 24,90** *(pagamento único)*")
-        st.link_button("Comprar 350 ⚡ (R$ 24,90)", "https://mercadopago.com.br", use_container_width=True)
-
-    with p3:
-        st.warning("**Pacote Pro Max**\n\n### +1.000 Créditos ⚡\n\n**R$ 49,90** *(pagamento único)*")
-        st.link_button("Comprar 1.000 ⚡ (R$ 49,90)", "https://mercadopago.com.br", use_container_width=True)
-
-    st.caption("Após concluir o pagamento, insira abaixo o **Código de Ativação** recebido no comprovante:")
-
-    with st.form("form_resgate_pago"):
-        cod_input = st.text_input("Código de Ativação do Pacote:")
-        if st.form_submit_button("Ativar Créditos Comprados", icon=":material/verified:", type="primary"):
+    with st.form("form_resgate_gratis"):
+        cod_input = st.text_input("Digite o Código de Recarga que você recebeu do criador:")
+        if st.form_submit_button("Resgatar Créditos Grátis", icon=":material/redeem:", type="primary"):
             cod = cod_input.strip().upper()
             if cod:
                 conn = sqlite3.connect("memoria.db")
                 row = conn.execute("SELECT valor, usado FROM codigos_pagos WHERE codigo=?", (cod,)).fetchone()
                 if not row:
                     conn.close()
-                    st.error("Código inválido. Verifique se digitou corretamente.")
+                    st.error("Código inválido. Peça um código válido ao criador Luca Legal.")
                 elif row[1] == 1:
                     conn.close()
-                    st.error("Este código já foi utilizado anteriormente.")
+                    st.error("Este código já foi usado anteriormente. Peça um novo código ao criador!")
                 else:
                     conn.execute("UPDATE codigos_pagos SET usado=1 WHERE codigo=?", (cod,))
                     conn.commit()
                     conn.close()
                     alterar_creditos(row[0])
-                    st.success(f"Pagamento confirmado! +{row[0]} créditos ⚡ adicionados à sua conta!")
+                    st.success(f"Parabéns! +{row[0]} créditos gratuitos ⚡ adicionados à sua conta!")
                     st.rerun()
 
     st.divider()
-    with st.expander("Painel Financeiro do Criador (Gerar Códigos e Creditar)"):
+    with st.expander("Painel do Criador — Gerar Códigos Gratuitos (Acesso Restrito)"):
         s_cred = st.text_input("Código de acesso do criador:", type="password", key="pwd_cred")
         if s_cred == SENHA_CRIADOR:
-            st.markdown("#### 1. Gerar Código de Recarga Único (Para Entregar ao Cliente)")
+            st.markdown("#### 1. Gerar Código de Presente Único (Para Enviar a um Inscrito)")
             col_g1, col_g2 = st.columns(2)
-            pacote_gerar = col_g1.selectbox("Valor do pacote pago:", [100, 350, 1000])
-            if col_g2.button("Gerar Novo Código Único", icon=":material/key:"):
+            pacote_gerar = col_g1.selectbox("Quantidade de créditos grátis:", [50, 100, 300, 500, 1000])
+            if col_g2.button("Gerar Código Agora", icon=":material/key:"):
                 novo_cod = f"LUCA-{pacote_gerar}-{str(uuid.uuid4())[:6].upper()}"
                 conn = sqlite3.connect("memoria.db")
                 conn.execute("INSERT INTO codigos_pagos (codigo, valor, usado) VALUES (?, ?, 0)", (novo_cod, pacote_gerar))
                 conn.commit()
                 conn.close()
-                st.success("Código gerado com sucesso (uso único):")
+                st.success("Código gerado! Copie e envie para o usuário (uso único):")
                 st.code(novo_cod, language="text")
 
             st.divider()
-            st.markdown("#### 2. Enviar Créditos Direto para um Usuário")
-            u_alvo = st.text_input("Nome de usuário do comprador:")
+            st.markdown("#### 2. Enviar Créditos Direto para uma Conta")
+            u_alvo = st.text_input("Nome de usuário (sem @):")
             qtd_add = st.number_input("Quantidade de créditos:", min_value=10, max_value=50000, value=100)
-            if st.button("Creditar Conta Manualmente", icon=":material/send:"):
+            if st.button("Creditar Diretamente", icon=":material/send:"):
                 conn = sqlite3.connect("memoria.db")
                 conn.execute("UPDATE usuarios SET creditos = COALESCE(creditos, 10) + ? WHERE usuario=?", (qtd_add, u_alvo.strip()))
                 conn.commit()
                 conn.close()
-                st.success(f"+{qtd_add} créditos adicionados para @{u_alvo.strip()}!")
+                st.success(f"+{qtd_add} créditos enviados para @{u_alvo.strip()}!")
 
 def tela_configuracoes():
     st.subheader("Central de Configurações — L.U.C.AI v3.1")
