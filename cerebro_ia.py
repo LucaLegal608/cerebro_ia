@@ -105,10 +105,15 @@ st.markdown("""
         font-weight: 600 !important;
         transition: all 0.2s ease-in-out !important;
     }
-    .stButton > button[kind="primary"], [data-testid="stFormSubmitButton"] > button[kind="primary"] {
+       button[kind="primary"], [data-testid="stBaseButton-primary"] {
         background: linear-gradient(90deg, #0284C7 0%, #2563EB 100%) !important;
         border: 1.5px solid #00E5FF !important;
         color: #FFFFFF !important;
+    }
+    button[kind="primary"] *, [data-testid="stBaseButton-primary"] * {
+        color: #FFFFFF !important;
+    }
+
     }
     .stButton > button[kind="primary"] p, .stButton > button[kind="primary"] span, [data-testid="stFormSubmitButton"] > button[kind="primary"] p {
         color: #FFFFFF !important;
