@@ -8,7 +8,13 @@ from groq import Groq
 import streamlit as st
 import banco_memoria
 
-st.set_page_config(page_title="L.U.C.AI (v2.0) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="expanded")
+try:
+    from duckduckgo_search import DDGS
+    TEM_BUSCA = True
+except ImportError:
+    TEM_BUSCA = False
+
+st.set_page_config(page_title="L.U.C.AI (v2.0) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
 banco_memoria.iniciar_banco()
 
 def iniciar_tabelas_v2():
@@ -42,7 +48,7 @@ if "usuario_logado" not in st.session_state:
         dados_usr = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=?", (usr_salvo,)).fetchone()
         conn.close()
         if dados_usr:
-            st.session_state.usuario_logado = {"usuario": dados_usr[0], "nome": dados_usr[1]}
+            st.session_state.usuario_logado = {"usuario": dados_usr, "nome": dados_usr}
 
 if "conversas" not in st.session_state:
     id_ini = str(uuid.uuid4())
@@ -69,21 +75,97 @@ def excluir_conversa(id_conv):
 st.markdown("""
 <style>
     @import url('https://googleapis.com');
-    .stApp { background-color: #FFFFFF; color: #1F1F1F; font-family: 'Plus Jakarta Sans', sans-serif; }
-    section[data-testid="stSidebar"] { background-color: #F8FAFD; border-right: 1px solid #E2E8F0; }
-    .gemini-header { display: flex; align-items: center; gap: 16px; padding: 0.6rem 0.5rem 1rem 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid #E2E8F0; }
-    .chip-emblem { width: 52px; height: 52px; border-radius: 16px; background: linear-gradient(135deg, #0F172A 0%, #0284C7 55%, #7C3AED 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(0, 229, 255, 0.35); flex-shrink: 0; }
-    .gemini-title { font-size: 2.1rem; font-weight: 700; background: linear-gradient(90deg, #0F172A 0%, #00B4D8 55%, #7C3AED 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; margin: 0; line-height: 1.2; }
-    .gemini-sigla { font-size: 1.02rem; color: #5F6368; font-weight: 500; margin-left: 8px; }
-    .badge-v2 { background-color: #E0F7FA; color: #00838F; border: 1px solid #00E5FF; font-size: 0.78rem; font-weight: 700; padding: 3px 12px; border-radius: 999px; vertical-align: middle; margin-left: 10px; }
-    .gemini-subtitle { color: #5F6368; font-size: 0.96rem; margin-top: 0.2rem; }
-    .stButton > button, [data-testid="stFormSubmitButton"] > button { border-radius: 14px !important; border: 1px solid #CBD5E1 !important; background-color: #F8FAFD !important; color: #1F1F1F !important; font-weight: 600 !important; transition: all 0.2s ease-in-out !important; }
-    .stButton > button:hover, [data-testid="stFormSubmitButton"] > button:hover { background-color: #00E5FF !important; border-color: #00B8D4 !important; color: #002535 !important; box-shadow: 0 0 18px rgba(0, 229, 255, 0.85), 0 0 6px rgba(0, 229, 255, 0.6) !important; transform: translateY(-1px) !important; }
-    .stButton > button[kind="primary"], [data-testid="stFormSubmitButton"] > button[kind="primary"] { background-color: #D3E3FD !important; border: 1px solid #90CAF9 !important; color: #041E49 !important; }
-    .stButton > button[kind="primary"]:hover, [data-testid="stFormSubmitButton"] > button[kind="primary"]:hover { background-color: #00E5FF !important; border-color: #00B8D4 !important; color: #002535 !important; box-shadow: 0 0 20px rgba(0, 229, 255, 0.9) !important; }
-    [data-testid="stChatMessage"] { background-color: #F8FAFD; border: 1px solid #E2E8F0; border-radius: 18px; padding: 1rem 1.2rem; margin-bottom: 0.75rem; }
+    
+    html, body, .stApp, [data-testid="stAppViewContainer"] {
+        background-color: var(--background-color) !important;
+        color: var(--text-color) !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+    section[data-testid="stSidebar"], section[data-testid="stSidebar"] > div {
+        background-color: var(--secondary-background-color) !important;
+        border-right: 1px solid rgba(128, 128, 128, 0.25) !important;
+        color: var(--text-color) !important;
+    }
+    p, span, div, label, h1, h2, h3, h4, h5, li {
+        color: var(--text-color) !important;
+    }
+
+    .gemini-header { display: flex; align-items: center; gap: 14px; padding: 0.5rem 0.2rem 0.9rem 0.2rem; margin-bottom: 0.8rem; border-bottom: 1px solid rgba(128, 128, 128, 0.25); }
+    .chip-emblem { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #0F172A 0%, #0284C7 55%, #7C3AED 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0, 229, 255, 0.35); flex-shrink: 0; }
+    .gemini-title { font-size: 1.95rem; font-weight: 700; background: linear-gradient(90deg, #00B4D8 0%, #38BDF8 50%, #A855F7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent !important; display: inline-block; margin: 0; line-height: 1.2; }
+    .gemini-sigla { font-size: 0.98rem; opacity: 0.8; font-weight: 500; margin-left: 6px; }
+    .badge-v2 { background-color: rgba(0, 229, 255, 0.15) !important; color: #00B8D4 !important; border: 1px solid #00E5FF !important; font-size: 0.74rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; vertical-align: middle; margin-left: 8px; }
+    .gemini-subtitle { opacity: 0.8; font-size: 0.92rem; margin-top: 0.2rem; }
+
+    @media (max-width: 768px) {
+        .gemini-header { gap: 10px; padding-top: 0.2rem; }
+        .chip-emblem { width: 40px; height: 40px; border-radius: 12px; }
+        .gemini-title { font-size: 1.45rem; }
+        .gemini-sigla { display: block; margin-left: 0; font-size: 0.8rem; }
+        .gemini-subtitle { font-size: 0.82rem; }
+        .block-container { padding-top: 2.8rem !important; padding-left: 0.8rem !important; padding-right: 0.8rem !important; }
+    }
+
+    .stButton > button, [data-testid="stFormSubmitButton"] > button {
+        border-radius: 14px !important;
+        border: 1.5px solid #38BDF8 !important;
+        background-color: var(--secondary-background-color) !important;
+        color: var(--text-color) !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+    .stButton > button p, .stButton > button span, [data-testid="stFormSubmitButton"] > button p {
+        color: var(--text-color) !important;
+    }
+    .stButton > button:hover, .stButton > button:active, [data-testid="stFormSubmitButton"] > button:hover {
+        background-color: #00E5FF !important;
+        border-color: #00B8D4 !important;
+        color: #002535 !important;
+        box-shadow: 0 0 18px rgba(0, 229, 255, 0.85) !important;
+    }
+    .stButton > button:hover p, .stButton > button:hover span, [data-testid="stFormSubmitButton"] > button:hover p {
+        color: #002535 !important;
+    }
+    .stButton > button[kind="primary"], [data-testid="stFormSubmitButton"] > button[kind="primary"] {
+        background: linear-gradient(90deg, #0284C7 0%, #2563EB 100%) !important;
+        border: 1.5px solid #00E5FF !important;
+    }
+    .stButton > button[kind="primary"] p, .stButton > button[kind="primary"] span, [data-testid="stFormSubmitButton"] > button[kind="primary"] p {
+        color: #FFFFFF !important;
+    }
+
+    [data-testid="stChatMessage"] {
+        background-color: var(--secondary-background-color) !important;
+        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+        border-radius: 18px !important;
+        padding: 0.9rem 1rem !important;
+        margin-bottom: 0.65rem !important;
+    }
+    [data-testid="stBottom"], [data-testid="stBottom"] > div {
+        background-color: var(--background-color) !important;
+    }
+    [data-testid="stChatInput"] {
+        background-color: var(--secondary-background-color) !important;
+        border: 2px solid #38BDF8 !important;
+        border-radius: 22px !important;
+    }
+    [data-testid="stChatInput"] textarea {
+        color: var(--text-color) !important;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+def pesquisar_na_web(consulta):
+    if not TEM_BUSCA:
+        return ""
+    try:
+        resultados = DDGS().text(consulta, region="br-pt", max_results=4)
+        if not resultados:
+            return ""
+        resumo_web = "\n".join([f"- {r.get('title', '')}: {r.get('body', '')}" for r in resultados])
+        return f"\n\n[RESULTADOS DA PESQUISA NA INTERNET EM TEMPO REAL]:\n{resumo_web}\nUse esses dados recentes para responder com precisão."
+    except Exception:
+        return ""
 
 def ler_dna_criador():
     try:
@@ -113,20 +195,30 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     for modelo in modelos:
         try:
             resposta = client.chat.completions.create(model=modelo, messages=mensagens_formatadas, temperature=temperatura)
-            return resposta.choices[0].message.content
+            return resposta.choices.message.content
         except Exception as erro:
             ultimo_erro = str(erro)
             time.sleep(1)
     return f"Não foi possível responder agora. Detalhe: {ultimo_erro}"
 
-def processar_envio_publico(texto_usuario):
+def processar_envio_publico(texto_usuario, modo_pers="Equilibrada", usar_web=False):
     conv = st.session_state.conversas[st.session_state.conversa_atual]
     if conv["titulo"] == "Nova conversa":
         conv["titulo"] = texto_usuario[:26] + ("..." if len(texto_usuario) > 26 else "")
     conv["mensagens"].append({"role": "user", "content": texto_usuario})
     nome_usr = st.session_state.usuario_logado["nome"] if st.session_state.usuario_logado else "Visitante"
-    inst = f"Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você está conversando com {nome_usr}. Fale EXCLUSIVAMENTE em Português do Brasil natural (nunca use português de Portugal). CONTEXTO DO CRIADOR (use só se perguntarem sobre o canal Luca Legal): {ler_dna_criador()}. MEMÓRIAS: {banco_memoria.buscar_todas_notas()}. Ajude com qualquer assunto do dia a dia de forma amigável e inteligente."
-    conv["mensagens"].append({"role": "assistant", "content": gerar_resposta(texto_usuario, conv["mensagens"][:-1], inst, 0.7)})
+    
+    regras_pers = {
+        "Equilibrada": "Responda de forma amigável, clara e bem estruturada.",
+        "Professor Didático": "Explique passo a passo de forma bem didática, como um excelente professor, dando exemplos práticos fáceis de entender.",
+        "Criativa": "Use muita criatividade, metáforas envolventes e ideias fora da caixa.",
+        "Ultra-Curta": "Seja extremamente direta: responda em no máximo 3 linhas curtas, sem rodeios."
+    }
+    dados_web = pesquisar_na_web(texto_usuario) if usar_web else ""
+    temp = 0.85 if modo_pers == "Criativa" else 0.65
+    
+    inst = f"Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você está conversando com {nome_usr}. ESTILO DE RESPOSTA ATUAL ({modo_pers}): {regras_pers[modo_pers]} Fale EXCLUSIVAMENTE em Português do Brasil natural. CONTEXTO DO CRIADOR (use só se perguntarem sobre o canal Luca Legal): {ler_dna_criador()}. MEMÓRIAS: {banco_memoria.buscar_todas_notas()}.{dados_web}"
+    conv["mensagens"].append({"role": "assistant", "content": gerar_resposta(texto_usuario, conv["mensagens"][:-1], inst, temp)})
 
 with st.sidebar:
     st.markdown("### :material/memory: L.U.C.AI")
@@ -186,7 +278,7 @@ with st.sidebar:
 st.markdown(f"""
 <div class="gemini-header">
     <div class="chip-emblem">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
             <rect x="6" y="6" width="12" height="12" rx="2.5" stroke="url(#grad_chip)" stroke-width="2"/>
             <rect x="9.5" y="9.5" width="5" height="5" rx="1" fill="#00F3FF"/>
             <path d="M9 2V5M15 2V5M9 19V22M15 19V22M2 9H5M2 15H5M19 9H22M19 15H22" stroke="#00F3FF" stroke-width="2" stroke-linecap="round"/>
@@ -206,31 +298,37 @@ if st.session_state.modo_tela != "chat":
         st.rerun()
 
 if st.session_state.modo_tela == "chat":
+    col_pers, col_web = st.columns([0.62, 0.38])
+    with col_pers:
+        modo_escolhido = st.selectbox("Personalidade:", ["Equilibrada", "Professor Didático", "Criativa", "Ultra-Curta"], label_visibility="collapsed")
+    with col_web:
+        busca_web_ativa = st.toggle("Pesquisar na Web", value=True)
+
     conv = st.session_state.conversas[st.session_state.conversa_atual]
     if st.session_state.usuario_logado and len(conv["mensagens"]) == 1:
         st.caption("Sugestões completas desbloqueadas:")
         c1, c2, c3, c4 = st.columns(4)
-        if c1.button("Me ajude a estudar", icon=":material/school:", use_container_width=True):
-            processar_envio_publico("Me ajude a estudar e resumir um assunto importante hoje!")
+        if c1.button("Notícias de hoje", icon=":material/newspaper:", use_container_width=True):
+            processar_envio_publico("Quais são as principais notícias de hoje no Brasil e no mundo?", modo_escolhido, True)
             st.rerun()
         if c2.button("Criar um código", icon=":material/code:", use_container_width=True):
-            processar_envio_publico("Quero ajuda para criar ou entender um código de programação.")
+            processar_envio_publico("Quero ajuda para criar ou entender um código de programação.", modo_escolhido, busca_web_ativa)
             st.rerun()
-        if c3.button("Receita prática", icon=":material/restaurant:", use_container_width=True):
-            processar_envio_publico("Me sugira uma receita rápida, gostosa e fácil de fazer hoje!")
+        if c3.button("Me ajude a estudar", icon=":material/school:", use_container_width=True):
+            processar_envio_publico("Me ajude a estudar e resumir um assunto importante hoje!", modo_escolhido, busca_web_ativa)
             st.rerun()
         if c4.button("Ideias criativas", icon=":material/lightbulb:", use_container_width=True):
-            processar_envio_publico("Preciso de ideias criativas para um projeto novo!")
+            processar_envio_publico("Preciso de ideias criativas para um projeto novo!", modo_escolhido, busca_web_ativa)
             st.rerun()
     elif not st.session_state.usuario_logado:
-        st.caption("Você está na versão simplificada. Crie sua conta gratuita para liberar múltiplas conversas e comandos rápidos.")
+        st.caption("Modo simplificado ativo. Toque na seta **>** no canto superior esquerdo para abrir o menu, criar conta ou enviar feedback.")
 
     for msg in conv["mensagens"]:
         with st.chat_message(msg["role"], avatar=":material/memory:" if msg["role"] == "assistant" else ":material/person:"):
             st.markdown(msg["content"])
 
     if prompt_pub := st.chat_input("Pergunte à L.U.C.AI..."):
-        processar_envio_publico(prompt_pub)
+        processar_envio_publico(prompt_pub, modo_escolhido, busca_web_ativa)
         st.rerun()
 
 elif st.session_state.modo_tela == "contas":
@@ -253,8 +351,8 @@ elif st.session_state.modo_tela == "contas":
                     res = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=? AND senha=?", (u_login.strip(), s_login.strip())).fetchone()
                     conn.close()
                     if res:
-                        st.session_state.usuario_logado = {"usuario": res[0], "nome": res[1]}
-                        st.query_params["sessao"] = res[0]
+                        st.session_state.usuario_logado = {"usuario": res, "nome": res}
+                        st.query_params["sessao"] = res
                         st.session_state.modo_tela = "chat"
                         st.rerun()
                     else:
@@ -298,53 +396,3 @@ elif st.session_state.modo_tela == "feedback":
 
 elif st.session_state.modo_tela == "ver_feedbacks":
     st.subheader("Feedbacks Recebidos (Acesso Restrito)")
-    senha_fb = st.text_input("Código de acesso:", type="password", key="pwd_fb")
-    if senha_fb == SENHA_CRIADOR:
-        conn = sqlite3.connect("memoria.db")
-        lista_fb = conn.execute("SELECT id, autor, mensagem, data FROM feedbacks ORDER BY id DESC").fetchall()
-        conn.close()
-        if not lista_fb:
-            st.info("Nenhum feedback recebido ainda.")
-        for item in lista_fb:
-            st.markdown(f"**#{item[0]} • {item[1]}** *({item[3]})*")
-            st.info(item[2])
-                
-
-elif st.session_state.modo_tela == "estudio":
-    st.subheader("Estúdio do Criador (Acesso Restrito)")
-    senha_est = st.text_input("Código de acesso:", type="password", key="pwd_est")
-    if senha_est != "" and senha_est != SENHA_CRIADOR:
-        st.error("Código incorreto.")
-    if senha_est == SENHA_CRIADOR:
-        st.success("Acesso autorizado, Luca!")
-        if "hist_copiloto" not in st.session_state:
-            st.session_state.hist_copiloto = []
-        for msg in st.session_state.hist_copiloto:
-            with st.chat_message(msg["role"], avatar=":material/movie_edit:" if msg["role"] == "assistant" else ":material/person:"):
-                st.markdown(msg["content"])
-        if prompt_yt := st.chat_input("Peça roteiros ou salve na memória...", key="in_yt"):
-            st.session_state.hist_copiloto.append({"role": "user", "content": prompt_yt})
-            inst_yt = f"Você é a L.U.C.AI ({VERSAO_IA}) operando para o criador Luca Legal. Se pedir para salvar/lembrar algo, inclua no final: [SALVAR_MEMORIA: texto]. DNA: {ler_dna_criador()}. MEMÓRIAS: {banco_memoria.buscar_todas_notas()}"
-            resp = gerar_resposta(prompt_yt, st.session_state.hist_copiloto[:-1], inst_yt, 0.7)
-            match = re.search(r"\[SALVAR_MEMORIA:\s*(.*?)\]", resp, re.DOTALL)
-            if match:
-                txt = match.group(1).strip()
-                banco_memoria.salvar_nota("Atualização via Chat", txt)
-                resp = re.sub(r"\[SALVAR_MEMORIA:.*?\]", "", resp, flags=re.DOTALL).strip() + f"\n\n*Salvo na memória:* `{txt}`"
-            st.session_state.hist_copiloto.append({"role": "assistant", "content": resp})
-            st.rerun()
-
-elif st.session_state.modo_tela == "memoria":
-    st.subheader("Banco de Dados (Acesso Restrito)")
-    senha_mem = st.text_input("Código de acesso:", type="password", key="pwd_mem")
-    if senha_mem != "" and senha_mem != SENHA_CRIADOR:
-        st.error("Código incorreto.")
-    if senha_mem == SENHA_CRIADOR:
-        cat = st.selectbox("Categoria", ["Novidade", "Produto/Link", "Informação Geral", "Regra de Resposta"])
-        nota = st.text_area("O que a L.U.C.AI deve memorizar?")
-        if st.button("Salvar Manualmente", icon=":material/save:", type="primary"):
-            if nota.strip():
-                banco_memoria.salvar_nota(cat, nota)
-                st.success("Salvo com sucesso!")
-                st.rerun()
-        st.info(banco_memoria.buscar_todas_notas() or "Nenhuma memória extra salva.")
