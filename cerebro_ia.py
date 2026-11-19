@@ -99,33 +99,42 @@ st.markdown("""
         .block-container { padding-top: 2.8rem !important; padding-left: 0.8rem !important; padding-right: 0.8rem !important; }
     }
 
+    /* Botões comuns (limpos e discretos, sem neon) */
     .stButton > button, [data-testid="stFormSubmitButton"] > button {
         border-radius: 14px !important;
-        border: 1.5px solid #00B4D8 !important;
+        border: 1.5px solid rgba(128, 128, 128, 0.35) !important;
         font-weight: 600 !important;
-        transition: all 0.2s ease-in-out !important;
+        transition: all 0.2s ease !important;
     }
-       button[kind="primary"], [data-testid="stBaseButton-primary"] {
-        background: linear-gradient(90deg, #0284C7 0%, #2563EB 100%) !important;
-        border: 1.5px solid #00E5FF !important;
-        color: #FFFFFF !important;
-    }
-    button[kind="primary"] *, [data-testid="stBaseButton-primary"] * {
-        color: #FFFFFF !important;
+    .stButton > button:hover, [data-testid="stFormSubmitButton"] > button:hover {
+        border-color: #00B4D8 !important;
     }
 
+    /* Animação e brilho ciano neon EXCLUSIVOS do botão "Nova conversa" (primary) */
+    @keyframes pulsoCiano {
+        0% { transform: scale(1); box-shadow: 0 0 12px rgba(0, 229, 255, 0.75); }
+        45% { transform: scale(0.93); box-shadow: 0 0 36px rgba(0, 243, 255, 1), 0 0 14px #FFFFFF; }
+        80% { transform: scale(1.03); box-shadow: 0 0 24px rgba(0, 243, 255, 0.95); }
+        100% { transform: scale(1); box-shadow: 0 0 16px rgba(0, 229, 255, 0.8); }
     }
-    .stButton > button[kind="primary"] p, .stButton > button[kind="primary"] span, [data-testid="stFormSubmitButton"] > button[kind="primary"] p {
-        color: #FFFFFF !important;
+
+    button[kind="primary"], [data-testid="stBaseButton-primary"] {
+        background: linear-gradient(90deg, #0096C7 0%, #00E5FF 100%) !important;
+        border: 1.5px solid #00F3FF !important;
+        color: #031525 !important;
+        font-weight: 700 !important;
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.65) !important;
+        transition: all 0.25s ease !important;
     }
-    .stButton > button:hover, .stButton > button:active, [data-testid="stFormSubmitButton"] > button:hover {
-        background: #00E5FF !important;
-        border-color: #00B8D4 !important;
-        color: #050B14 !important;
-        box-shadow: 0 0 18px rgba(0, 229, 255, 0.85) !important;
+    button[kind="primary"] *, [data-testid="stBaseButton-primary"] * {
+        color: #031525 !important;
     }
-    .stButton > button:hover p, .stButton > button:hover span, [data-testid="stFormSubmitButton"] > button:hover p {
-        color: #050B14 !important;
+    button[kind="primary"]:hover, [data-testid="stBaseButton-primary"]:hover {
+        box-shadow: 0 0 26px rgba(0, 243, 255, 0.95), 0 0 10px rgba(0, 243, 255, 0.8) !important;
+        transform: translateY(-2px) !important;
+    }
+    button[kind="primary"]:active, [data-testid="stBaseButton-primary"]:active {
+        animation: pulsoCiano 0.4s ease-out !important;
     }
 
     [data-testid="stChatMessage"] {
@@ -229,7 +238,7 @@ with st.sidebar:
                 st.rerun()
     else:
         st.info("Modo Visitante (Simplificado)")
-        if st.button("Entrar / Criar Conta", icon=":material/login:", use_container_width=True, type="primary", help="Faça login ou crie uma conta gratuita para desbloquear todos os recursos"):
+        if st.button("Entrar / Criar Conta", icon=":material/login:", use_container_width=True, help="Faça login ou crie uma conta gratuita para desbloquear todos os recursos"):
             st.session_state.modo_tela = "contas"
             st.rerun()
 
@@ -352,7 +361,7 @@ elif st.session_state.modo_tela == "instrucoes":
     st.caption("Diga à L.U.C.AI o que você gostaria que ela soubesse sobre você ou como prefere as respostas.")
     inst_atual = st.session_state.get("inst_usuario", "")
     nova_inst = st.text_area("Suas preferências (ex: 'Gosto de respostas diretas e estou estudando Python'):", value=inst_atual)
-    if st.button("Salvar Preferências", icon=":material/check:", type="primary", help="Salva suas instruções para todas as próximas respostas"):
+    if st.button("Salvar Preferências", icon=":material/check:", help="Salva suas instruções para todas as próximas respostas"):
         st.session_state.inst_usuario = nova_inst.strip()
         st.success("Instruções salvas! A L.U.C.AI já vai aplicar isso nas próximas respostas.")
 
