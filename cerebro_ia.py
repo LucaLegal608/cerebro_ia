@@ -384,59 +384,32 @@ if st.session_state.modo_tela != "chat":
         st.rerun()
 
 def tela_creditos():
-    st.subheader("Central de Créditos 100% Gratuitos — L.U.C.AI ⚡")
-    st.metric("Seu Saldo Atual", f"{obter_creditos()} créditos grátis ⚡", help="Todos os créditos da L.U.C.AI são totalmente gratuitos!")
-    st.caption("Consumo por uso: Mensagem = **1 ⚡** | Pesquisa Web / Imagem / Arquivo = **2 ⚡**")
+   if st.session_state.modo_tela == "chat":
+    conv = st.session_state.conversas[st.session_state.conversa_atual]
+    for idx, msg in enumerate(conv["mensagens"]):
+        with st.chat_message(msg["role"], avatar=":material/memory:" if msg["role"] == "assistant" else ":material/person:"):
+            texto_msg = msg["content"]
+            match_img = re.search(r"\[GERAR_IMAGEM:\s*(.*?)\]", texto_msg, re.DOTALL)
+            if match_img:
+                prompt_en = match_img.group(1).strip()
+                texto_limpo = re.sub(r"\[GERAR_IMAGEM:.*?\]", "", texto_msg, flags=re.DOTALL).strip()
+                if texto_limpo:
+                    st.markdown(texto_limpo)
+                url_img = f"https://pollinations.ai{urllib.parse.quote(prompt_en)}?width=1024&height=1024&nologo=true&seed={idx + 42}"
+                st.image(url_img, caption=f"Imagem gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
+            else:
+                st.markdown(texto_msg)
 
-    st.info("🎁 **Os créditos são 100% de graça!** Peça um **Código de Recarga Gratuito** diretamente para o criador **Luca Legal** (nos comentários do YouTube, redes sociais ou mensagem) e ative abaixo sem pagar nada!")
+    if prompt_pub := st.chat_input("Pergunte à L.U.C.AI ou peça para criar uma imagem..."):
+        processar_envio_publico(prompt_pub)
+        st.rerun()
 
-    with st.form("form_resgate_gratis"):
-        cod_input = st.text_input("Digite o Código Gratuito que você recebeu do criador:")
-        if st.form_submit_button("Resgatar Créditos de Graça", icon=":material/redeem:", type="primary", help="Adiciona seus créditos gratuitos na hora"):
-            cod = cod_input.strip().upper()
-            if cod:
-                conn = sqlite3.connect("memoria.db")
-                row = conn.execute("SELECT valor, usado FROM codigos_pagos WHERE codigo=?", (cod,)).fetchone()
-                if not row:
-                    conn.close()
-                    st.error("Código inválido. Peça um código gratuito válido ao criador Luca Legal.")
-                elif row[1] == 1:
-                    conn.close()
-                    st.error("Este código já foi usado anteriormente. Peça um novo código gratuito ao criador!")
-                else:
-                    conn.execute("UPDATE codigos_pagos SET usado=1 WHERE codigo=?", (cod,))
-                    conn.commit()
-                    conn.close()
-                    alterar_creditos(row[0])
-                    st.success(f"Parabéns! +{row[0]} créditos gratuitos ⚡ adicionados à sua conta!")
-                    st.rerun()
+elif st.session_state.modo_tela == "creditos":
+    telas_extras.exibir_tela_creditos(obter_creditos, alterar_creditos, SENHA_CRIADOR)
 
-    st.divider()
-    with st.expander("Painel do Criador — Gerar Códigos Gratuitos (Acesso Restrito)"):
-        s_cred = st.text_input("Código de acesso do criador:", type="password", key="pwd_cred")
-        if s_cred == SENHA_CRIADOR:
-            st.markdown("#### 1. Gerar Código Gratuito Único (Para Enviar a um Inscrito)")
-            col_g1, col_g2 = st.columns(2)
-            pacote_gerar = col_g1.selectbox("Quantidade de créditos grátis:", [50, 100, 300, 500, 1000], help="Escolha quantos créditos gratuitos esse código vai dar")
-            if col_g2.button("Gerar Código Grátis Agora", icon=":material/key:", help="Cria um código único de recarga gratuita"):
-                novo_cod = f"LUCA-{pacote_gerar}-{str(uuid.uuid4())[:6].upper()}"
-                conn = sqlite3.connect("memoria.db")
-                conn.execute("INSERT INTO codigos_pagos (codigo, valor, usado) VALUES (?, ?, 0)", (novo_cod, pacote_gerar))
-                conn.commit()
-                conn.close()
-                st.success("Código gratuito gerado! Copie e envie para o usuário (uso único):")
-                st.code(novo_cod, language="text")
+elif st.session_state.modo_tela == "configuracoes":
+    telas_extras.exibir_tela_configuracoes(ler_memorias_usuario, criar_nova_conversa)
 
-            st.divider()
-            st.markdown("#### 2. Enviar Créditos Grátis Direto para uma Conta")
-            u_alvo = st.text_input("Nome de usuário (sem @):")
-            qtd_add = st.number_input("Quantidade de créditos grátis:", min_value=10, max_value=50000, value=100)
-            if st.button("Creditar Grátis Diretamente", icon=":material/send:", help="Envia créditos gratuitos direto para o usuário"):
-                conn = sqlite3.connect("memoria.db")
-                conn.execute("UPDATE usuarios SET creditos = COALESCE(creditos, 10) + ? WHERE usuario=?", (qtd_add, u_alvo.strip()))
-                conn.commit()
-                conn.close()
-                st.success(f"+{qtd_add} créditos gratuitos enviados para @{u_alvo.strip()}!")
 
 def tela_configuracoes():
 elif st.session_state.modo_tela == "creditos":
