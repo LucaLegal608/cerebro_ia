@@ -1,5 +1,7 @@
 import os
 import re
+import io
+import json
 import time
 import uuid
 import sqlite3
@@ -14,31 +16,73 @@ try:
 except ImportError:
     TEM_BUSCA = False
 
-st.set_page_config(page_title="L.U.C.AI (v2.0) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
+try:
+    from pypdf import PdfReader
+    TEM_PDF = True
+except ImportError:
+    TEM_PDF = False
+
+try:
+    from gtts import gTTS
+    TEM_VOZ = True
+except ImportError:
+    TEM_VOZ = False
+
+st.set_page_config(page_title="L.U.C.AI (v3.0) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
 banco_memoria.iniciar_banco()
 
-def iniciar_tabelas_v2():
+def iniciar_tabelas_v3():
     conn = sqlite3.connect("memoria.db")
     c = conn.cursor()
     c.execute("CREATE TABLE IF NOT EXISTS usuarios (usuario TEXT PRIMARY KEY, senha TEXT, nome TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS feedbacks (id INTEGER PRIMARY KEY AUTOINCREMENT, autor TEXT, mensagem TEXT, data TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS memorias_usr (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario TEXT, fato TEXT)")
     conn.commit()
     conn.close()
 
-iniciar_tabelas_v2()
+iniciar_tabelas_v3()
 
 CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 SENHA_CRIADOR = "947298688"
-VERSAO_IA = "v2.0"
+VERSAO_IA = "v3.0"
 
 def obter_data_hora_atual():
     agora = datetime.now(timezone(timedelta(hours=-3)))
     dias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v2.0**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — estudos, ideias, textos, programação ou dúvidas gerais. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.0**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — com ferramentas avançadas, memória, voz, arquivos e personalização total no menu **⋮ Configurações**. Como posso ajudar hoje?"
+
+# Inicialização das Configurações Completas (5 Categorias)
+CFG_PADRAO = {
+    "system_prompt": "",
+    "tom_voz": "Casual e Amigável",
+    "temperatura": 0.7,
+    "tamanho": "Equilibrado",
+    "idioma": "Português (Brasil)",
+    "janela_contexto": 10,
+    "base_conhecimento": "",
+    "web_ativa": True,
+    "img_ativa": True,
+    "arq_ativo": True,
+    "cod_ativo": True,
+    "conexoes": {"Google Agenda": False, "Notion": False, "WhatsApp": False, "CRM": False},
+    "modo_aprovacao": "Pedir confirmação antes de agir",
+    "voz_ativa": False,
+    "voz_sotaque": "pt",
+    "voz_lenta": False,
+    "atalhos": {"/resumir": "Resuma o texto ou assunto abaixo em tópicos claros e objetivos:", "/corrigir": "Revise e corrija a gramática e a clareza do texto abaixo:", "/ideias": "Me dê 5 ideias criativas e práticas sobre:"},
+    "modo_anonimo": False,
+    "limite_msgs_dia": 100
+}
+
+if "cfg" not in st.session_state:
+    st.session_state.cfg = CFG_PADRAO.copy()
+
+if "msgs_hoje" not in st.session_state:
+    st.session_state.msgs_hoje = 0
 
 if "usuario_logado" not in st.session_state:
     st.session_state.usuario_logado = None
@@ -78,18 +122,13 @@ def excluir_conversa(id_conv):
 st.markdown("""
 <style>
     @import url('https://googleapis.com');
-    
-    html, body, .stApp {
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
-    }
-
+    html, body, .stApp { font-family: 'Plus Jakarta Sans', sans-serif !important; }
     .gemini-header { display: flex; align-items: center; gap: 14px; padding: 0.5rem 0.2rem 0.9rem 0.2rem; margin-bottom: 0.8rem; border-bottom: 1px solid rgba(128, 128, 128, 0.25); }
     .chip-emblem { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #0284C7 0%, #38BDF8 50%, #7C3AED 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0, 229, 255, 0.35); flex-shrink: 0; }
     .gemini-title { font-size: 1.95rem; font-weight: 700; background: linear-gradient(90deg, #0284C7 0%, #00B4D8 50%, #9333EA 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent !important; display: inline-block; margin: 0; line-height: 1.2; }
     .gemini-sigla { font-size: 0.98rem; opacity: 0.8; font-weight: 500; margin-left: 6px; }
-    .badge-v2 { background-color: rgba(0, 229, 255, 0.15) !important; color: #00B4D8 !important; border: 1px solid #00B4D8 !important; font-size: 0.74rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; vertical-align: middle; margin-left: 8px; }
+    .badge-v3 { background-color: rgba(0, 229, 255, 0.15) !important; color: #00B4D8 !important; border: 1px solid #00B4D8 !important; font-size: 0.74rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; vertical-align: middle; margin-left: 8px; }
     .gemini-subtitle { opacity: 0.8; font-size: 0.92rem; margin-top: 0.2rem; }
-
     @media (max-width: 768px) {
         .gemini-header { gap: 10px; padding-top: 0.2rem; }
         .chip-emblem { width: 40px; height: 40px; border-radius: 12px; }
@@ -98,53 +137,26 @@ st.markdown("""
         .gemini-subtitle { font-size: 0.82rem; }
         .block-container { padding-top: 2.8rem !important; padding-left: 0.8rem !important; padding-right: 0.8rem !important; }
     }
-
-    /* Botões comuns (limpos e discretos, sem neon) */
-    .stButton > button, [data-testid="stFormSubmitButton"] > button {
-        border-radius: 14px !important;
-        border: 1.5px solid rgba(128, 128, 128, 0.35) !important;
-        font-weight: 600 !important;
-        transition: all 0.2s ease !important;
+    .stButton > button, [data-testid="stFormSubmitButton"] > button, [data-testid="stDownloadButton"] > button {
+        border-radius: 14px !important; border: 1.5px solid rgba(128, 128, 128, 0.35) !important; font-weight: 600 !important; transition: all 0.2s ease !important;
     }
-    .stButton > button:hover, [data-testid="stFormSubmitButton"] > button:hover {
+    .stButton > button:hover, [data-testid="stFormSubmitButton"] > button:hover, [data-testid="stDownloadButton"] > button:hover {
         border-color: #00B4D8 !important;
     }
-
-    /* Animação e brilho ciano neon EXCLUSIVOS do botão "Nova conversa" (primary) */
     @keyframes pulsoCiano {
         0% { transform: scale(1); box-shadow: 0 0 12px rgba(0, 229, 255, 0.75); }
         45% { transform: scale(0.93); box-shadow: 0 0 36px rgba(0, 243, 255, 1), 0 0 14px #FFFFFF; }
         80% { transform: scale(1.03); box-shadow: 0 0 24px rgba(0, 243, 255, 0.95); }
         100% { transform: scale(1); box-shadow: 0 0 16px rgba(0, 229, 255, 0.8); }
     }
-
     button[kind="primary"], [data-testid="stBaseButton-primary"] {
-        background: linear-gradient(90deg, #0096C7 0%, #00E5FF 100%) !important;
-        border: 1.5px solid #00F3FF !important;
-        color: #031525 !important;
-        font-weight: 700 !important;
-        box-shadow: 0 0 15px rgba(0, 229, 255, 0.65) !important;
-        transition: all 0.25s ease !important;
+        background: linear-gradient(90deg, #0096C7 0%, #00E5FF 100%) !important; border: 1.5px solid #00F3FF !important; color: #031525 !important; font-weight: 700 !important; box-shadow: 0 0 15px rgba(0, 229, 255, 0.65) !important; transition: all 0.25s ease !important;
     }
-    button[kind="primary"] *, [data-testid="stBaseButton-primary"] * {
-        color: #031525 !important;
-    }
-    button[kind="primary"]:hover, [data-testid="stBaseButton-primary"]:hover {
-        box-shadow: 0 0 26px rgba(0, 243, 255, 0.95), 0 0 10px rgba(0, 243, 255, 0.8) !important;
-        transform: translateY(-2px) !important;
-    }
-    button[kind="primary"]:active, [data-testid="stBaseButton-primary"]:active {
-        animation: pulsoCiano 0.4s ease-out !important;
-    }
-
-    [data-testid="stChatMessage"] {
-        border-radius: 18px !important;
-        padding: 0.9rem 1rem !important;
-        margin-bottom: 0.65rem !important;
-    }
-    [data-testid="stChatInput"] {
-        border-radius: 22px !important;
-    }
+    button[kind="primary"] *, [data-testid="stBaseButton-primary"] * { color: #031525 !important; }
+    button[kind="primary"]:hover, [data-testid="stBaseButton-primary"]:hover { box-shadow: 0 0 26px rgba(0, 243, 255, 0.95), 0 0 10px rgba(0, 243, 255, 0.8) !important; transform: translateY(-2px) !important; }
+    button[kind="primary"]:active, [data-testid="stBaseButton-primary"]:active { animation: pulsoCiano 0.4s ease-out !important; }
+    [data-testid="stChatMessage"] { border-radius: 18px !important; padding: 0.9rem 1rem !important; margin-bottom: 0.65rem !important; }
+    [data-testid="stChatInput"] { border-radius: 22px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -156,9 +168,29 @@ def pesquisar_na_web(consulta):
         if not resultados:
             return ""
         resumo_web = "\n".join([f"- {r.get('title', '')}: {r.get('body', '')}" for r in resultados])
-        return f"\n\n[RESULTADOS DA PESQUISA NA INTERNET EM TEMPO REAL]:\n{resumo_web}\nUse esses dados recentes para responder com precisão."
+        return f"\n\n[PESQUISA NA INTERNET EM TEMPO REAL]:\n{resumo_web}"
     except Exception:
         return ""
+
+def ler_memorias_usuario():
+    usr = st.session_state.usuario_logado["usuario"] if st.session_state.usuario_logado else "visitante"
+    conn = sqlite3.connect("memoria.db")
+    itens = conn.execute("SELECT id, fato FROM memorias_usr WHERE usuario=?", (usr,)).fetchall()
+    conn.close()
+    return itens
+
+def gerar_audio_voz(texto):
+    if not TEM_VOZ:
+        return None
+    try:
+        limpo = re.sub(r"[*#`_\[\]]", "", texto)[:600]
+        tts = gTTS(text=limpo, lang=st.session_state.cfg["voz_sotaque"], slow=st.session_state.cfg["voz_lenta"])
+        fp = io.BytesIO()
+        tts.write_to_fp(fp)
+        fp.seek(0)
+        return fp
+    except Exception:
+        return None
 
 def ler_dna_criador():
     try:
@@ -168,10 +200,10 @@ def ler_dna_criador():
         return "Projeto criado por Luca de Brito Ferreira."
 
 def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
-    sistema_completo = f"{instrucao_sistema}\n\n[DADO INTERNO SILENCIOSO - DATA E HORA ATUAL EM BRASÍLIA: {obter_data_hora_atual()}. NUNCA imprima esse colchete na resposta. Use apenas se perguntarem a data ou hora.]"
+    sistema_completo = f"{instrucao_sistema}\n\n[DADO INTERNO SILENCIOSO - DATA E HORA ATUAL EM BRASÍLIA: {obter_data_hora_atual()}. NUNCA imprima esse colchete na resposta.]"
     mensagens_formatadas = [{"role": "system", "content": sistema_completo}]
-    limite_hist = 12 if st.session_state.usuario_logado else 4
-    for item in historico[-limite_hist:]:
+    janela = st.session_state.cfg["janela_contexto"] if st.session_state.usuario_logado else 4
+    for item in historico[-janela:]:
         mensagens_formatadas.append({"role": item["role"], "content": item["content"]})
     mensagens_formatadas.append({"role": "user", "content": mensagem})
 
@@ -194,25 +226,43 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
             time.sleep(1)
     return f"Não foi possível responder agora. Detalhe: {ultimo_erro}"
 
-def processar_envio_publico(texto_usuario, modo_pers="Equilibrada", usar_web=False):
+def processar_envio_publico(texto_usuario):
+    cfg = st.session_state.cfg
+    if st.session_state.msgs_hoje >= cfg["limite_msgs_dia"]:
+        st.warning(f"Limite diário de {cfg['limite_msgs_dia']} mensagens atingido! Ajuste em Configurações > Segurança.")
+        return
+
+    # Aplica atalhos personalizados (ex: /resumir)
+    for cmd, expansao in cfg["atalhos"].items():
+        if texto_usuario.strip().startswith(cmd):
+            resto = texto_usuario.strip()[len(cmd):].strip()
+            texto_usuario = f"{expansao} {resto}".strip()
+            break
+
     conv = st.session_state.conversas[st.session_state.conversa_atual]
-    if conv["titulo"] == "Nova conversa":
+    if conv["titulo"] == "Nova conversa" and not cfg["modo_anonimo"]:
         conv["titulo"] = texto_usuario[:26] + ("..." if len(texto_usuario) > 26 else "")
     conv["mensagens"].append({"role": "user", "content": texto_usuario})
+    st.session_state.msgs_hoje += 1
+
     nome_usr = st.session_state.usuario_logado["nome"] if st.session_state.usuario_logado else "Visitante"
-    pref_usr = f" PREFERÊNCIAS DO USUÁRIO: {st.session_state.get('inst_usuario', '')}." if st.session_state.get("inst_usuario") else ""
+    mems_usr = "\n".join([f"- {f[1]}" for f in ler_memorias_usuario()])
+    apps_ativos = [k for k, v in cfg["conexoes"].items() if v]
     
-    regras_pers = {
-        "Equilibrada": "Responda de forma amigável, clara e bem estruturada.",
-        "Professor Didático": "Explique passo a passo de forma bem didática, como um excelente professor, dando exemplos práticos fáceis de entender.",
-        "Criativa": "Use muita criatividade, metáforas envolventes e ideias fora da caixa.",
-        "Ultra-Curta": "Seja extremamente direta: responda em no máximo 3 linhas curtas, sem rodeios."
-    }
-    dados_web = pesquisar_na_web(texto_usuario) if usar_web else ""
-    temp = 0.85 if modo_pers == "Criativa" else 0.65
-    
-    inst = f"Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você está conversando com {nome_usr}.{pref_usr} ESTILO DE RESPOSTA ATUAL ({modo_pers}): {regras_pers[modo_pers]} Fale EXCLUSIVAMENTE em Português do Brasil natural. CONTEXTO DO CRIADOR (use só se perguntarem sobre o canal Luca Legal): {ler_dna_criador()}. MEMÓRIAS: {banco_memoria.buscar_todas_notas()}.{dados_web}"
-    conv["mensagens"].append({"role": "assistant", "content": gerar_resposta(texto_usuario, conv["mensagens"][:-1], inst, temp)})
+    bloco_regras = f"""Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa com {nome_usr}.
+    - IDIOMA: {cfg['idioma']} (se for Detecção Automática, responda no idioma da pergunta; caso contrário, use exclusivamente o idioma escolhido).
+    - TOM DE VOZ: {cfg['tom_voz']}.
+    - TAMANHO DA RESPOSTA: {cfg['tamanho']}.
+    - INSTRUÇÕES DO USUÁRIO: {cfg['system_prompt'] or 'Nenhuma regra extra.'}
+    - MEMÓRIA APRENDIDA SOBRE O USUÁRIO: {mems_usr or 'Nenhum fato salvo ainda.'}
+    - BASE DE CONHECIMENTO (ARQUIVOS/LINKS): {cfg['base_conhecimento'][:4000] if cfg['base_conhecimento'] else 'Nenhum arquivo anexado.'}
+    - INTEGRAÇÕES CONECTADAS: {', '.join(apps_ativos) if apps_ativos else 'Nenhuma'} | MODO DE APROVAÇÃO: {cfg['modo_aprovacao']}.
+    - RECURSO DE IMAGENS ({'ATIVO' if cfg['img_ativa'] else 'DESATIVADO'}): Se o usuário pedir uma imagem e estiver ativo, gere um card visual usando Markdown `![Imagem](https://pollinations.ai)`.
+    - CONTEXTO DO CRIADOR (use só se perguntarem sobre o canal Luca Legal): {ler_dna_criador()}. MEMÓRIAS GERAIS: {banco_memoria.buscar_todas_notas()}."""
+
+    dados_web = pesquisar_na_web(texto_usuario) if cfg["web_ativa"] else ""
+    resp = gerar_resposta(texto_usuario, conv["mensagens"][:-1], bloco_regras + dados_web, cfg["temperatura"])
+    conv["mensagens"].append({"role": "assistant", "content": resp})
 
 with st.sidebar:
     st.markdown("### :material/memory: L.U.C.AI")
@@ -224,21 +274,23 @@ with st.sidebar:
         if st.button("Nova conversa", icon=":material/add_comment:", use_container_width=True, type="primary", help="Inicia um novo bate-papo do zero"):
             criar_nova_conversa()
             st.rerun()
+        if st.session_state.cfg["modo_anonimo"]:
+            st.warning("Modo Anônimo Ativo (Sem salvar títulos)")
         st.markdown("##### Recentes")
         for id_conv in reversed(list(st.session_state.conversas.keys())):
             dados = st.session_state.conversas[id_conv]
             c_tit, c_del = st.columns([0.80, 0.20])
             icone_chat = ":material/chat:" if id_conv == st.session_state.conversa_atual else ":material/chat_bubble_outline:"
-            if c_tit.button(dados["titulo"], icon=icone_chat, key=f"btn_{id_conv}", use_container_width=True, help="Abrir esta conversa salva"):
+            if c_tit.button(dados["titulo"], icon=icone_chat, key=f"btn_{id_conv}", use_container_width=True, help="Abrir esta conversa"):
                 st.session_state.conversa_atual = id_conv
                 st.session_state.modo_tela = "chat"
                 st.rerun()
-            if c_del.button("", icon=":material/delete:", key=f"del_{id_conv}", help="Apagar esta conversa permanentemente"):
+            if c_del.button("", icon=":material/delete:", key=f"del_{id_conv}", help="Apagar esta conversa"):
                 excluir_conversa(id_conv)
                 st.rerun()
     else:
         st.info("Modo Visitante (Simplificado)")
-        if st.button("Entrar / Criar Conta", icon=":material/login:", use_container_width=True, help="Faça login ou crie uma conta gratuita para desbloquear todos os recursos"):
+        if st.button("Entrar / Criar Conta", icon=":material/login:", use_container_width=True, help="Crie sua conta gratuita para liberar todas as configurações"):
             st.session_state.modo_tela = "contas"
             st.rerun()
 
@@ -247,46 +299,37 @@ with st.sidebar:
         st.session_state.menu_aberto = not st.session_state.menu_aberto
 
     if st.session_state.menu_aberto:
-        st.caption("Navegação e Conta")
-        if st.button("Chat Principal", icon=":material/chat:", use_container_width=True, help="Voltar para a tela principal de conversa com a IA"):
+        if st.button("Chat Principal", icon=":material/chat:", use_container_width=True, help="Voltar para o chat com a L.U.C.AI"):
             st.session_state.modo_tela = "chat"
             st.session_state.menu_aberto = False
             st.rerun()
-        if st.button("Contas (Login)", icon=":material/account_circle:", use_container_width=True, help="Gerenciar sua conta, entrar ou criar um novo cadastro"):
+        if st.button("Configurações Completas", icon=":material/settings:", use_container_width=True, help="Personalidade, Memória, Plugins, Voz e Segurança"):
+            st.session_state.modo_tela = "configuracoes"
+            st.session_state.menu_aberto = False
+            st.rerun()
+        if st.button("Contas (Login)", icon=":material/account_circle:", use_container_width=True, help="Entrar, cadastrar ou sair da conta"):
             st.session_state.modo_tela = "contas"
             st.session_state.menu_aberto = False
             st.rerun()
-        if st.button("Enviar Feedback", icon=":material/rate_review:", use_container_width=True, help="Enviar uma sugestão, elogio ou relatar erro ao criador"):
-            st.session_state.modo_tela = "feedback"
-            st.session_state.menu_aberto = False
-            st.rerun()
-
-        st.divider()
-        st.caption("Recursos da L.U.C.AI")
-        if st.button("Instruções Personalizadas", icon=":material/tune:", use_container_width=True, help="Configurar como você quer que a L.U.C.AI responda a você"):
-            st.session_state.modo_tela = "instrucoes"
-            st.session_state.menu_aberto = False
-            st.rerun()
-        if st.button("Ler Arquivo / Código", icon=":material/upload_file:", use_container_width=True, help="Enviar um documento ou código para a IA analisar e resumir"):
-            st.session_state.modo_tela = "arquivo"
-            st.session_state.menu_aberto = False
-            st.rerun()
-        if st.button("Compartilhar L.U.C.AI", icon=":material/share:", use_container_width=True, help="Copiar o link oficial da L.U.C.AI para enviar a outras pessoas"):
+        if st.button("Compartilhar L.U.C.AI", icon=":material/share:", use_container_width=True, help="Copiar o link oficial da L.U.C.AI"):
             st.session_state.modo_tela = "compartilhar"
             st.session_state.menu_aberto = False
             st.rerun()
-
+        if st.button("Enviar Feedback", icon=":material/rate_review:", use_container_width=True, help="Enviar sugestões ao criador"):
+            st.session_state.modo_tela = "feedback"
+            st.session_state.menu_aberto = False
+            st.rerun()
         st.divider()
         st.caption("Área Restrita (Criador)")
-        if st.button("Estúdio do Criador", icon=":material/movie_edit:", use_container_width=True, help="Painel exclusivo para roteiros e treinamento por conversa"):
+        if st.button("Estúdio do Criador", icon=":material/movie_edit:", use_container_width=True, help="Treinamento e roteiros"):
             st.session_state.modo_tela = "estudio"
             st.session_state.menu_aberto = False
             st.rerun()
-        if st.button("Banco de Dados", icon=":material/database:", use_container_width=True, help="Gerenciar regras e memórias permanentes da L.U.C.AI"):
+        if st.button("Banco de Dados", icon=":material/database:", use_container_width=True, help="Memórias globais"):
             st.session_state.modo_tela = "memoria"
             st.session_state.menu_aberto = False
             st.rerun()
-        if st.button("Ler Feedbacks", icon=":material/inbox:", use_container_width=True, help="Visualizar todas as mensagens enviadas pelos usuários"):
+        if st.button("Ler Feedbacks", icon=":material/inbox:", use_container_width=True, help="Ler mensagens dos usuários"):
             st.session_state.modo_tela = "ver_feedbacks"
             st.session_state.menu_aberto = False
             st.rerun()
@@ -306,66 +349,164 @@ st.markdown(f"""
         </svg>
     </div>
     <div>
-        <div><span class="gemini-title">L.U.C.AI</span><span class="gemini-sigla">— Lógica Unificada de Conhecimento e Ação Inteligente</span><span class="badge-v2">{VERSAO_IA}</span></div>
-        <div class="gemini-subtitle">Sua assistente inteligente para ajudar com qualquer coisa do dia a dia.</div>
+        <div><span class="gemini-title">L.U.C.AI</span><span class="gemini-sigla">— Lógica Unificada de Conhecimento e Ação Inteligente</span><span class="badge-v3">{VERSAO_IA}</span></div>
+        <div class="gemini-subtitle">Sua assistente inteligente completa para ajudar com qualquer coisa do dia a dia.</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 if st.session_state.modo_tela != "chat":
-    if st.button("Voltar ao Chat", icon=":material/arrow_back:", help="Retornar para a conversa principal"):
+    if st.button("Voltar ao Chat", icon=":material/arrow_back:", help="Voltar para a conversa"):
         st.session_state.modo_tela = "chat"
         st.rerun()
 
-if st.session_state.modo_tela == "chat":
-    col_pers, col_web = st.columns([0.62, 0.38])
-    with col_pers:
-        modo_escolhido = st.selectbox("Personalidade:", ["Equilibrada", "Professor Didático", "Criativa", "Ultra-Curta"], label_visibility="collapsed", help="Escolha o estilo de resposta da IA")
-    with col_web:
-        busca_web_ativa = st.toggle("Pesquisar na Web", value=True, help="Ativa ou desativa a busca de notícias e dados em tempo real na internet")
+def tela_configuracoes():
+    st.subheader("Central de Configurações — L.U.C.AI v3.0")
+    cfg = st.session_state.cfg
+    aba1, aba2, aba3, aba4, aba5 = st.tabs([
+        "1. Personalidade", "2. Memória & Arquivos", "3. Ferramentas & Apps", "4. Voz & Atalhos", "5. Privacidade & Segurança"
+    ])
 
+    with aba1:
+        st.markdown("#### Personalidade e Comportamento")
+        cfg["system_prompt"] = st.text_area("Instruções personalizadas (System Prompt):", value=cfg["system_prompt"], placeholder="Ex: Sempre responda em tópicos ou Aja como um especialista financeiro...")
+        c_tom, c_tam, c_idi = st.columns(3)
+        with c_tom:
+            cfg["tom_voz"] = st.selectbox("Tom de voz:", ["Casual e Amigável", "Formal e Profissional", "Direto ao Ponto", "Criativo", "Didático"], index=["Casual e Amigável", "Formal e Profissional", "Direto ao Ponto", "Criativo", "Didático"].index(cfg["tom_voz"]))
+        with c_tam:
+            cfg["tamanho"] = st.selectbox("Tamanho das respostas:", ["Curto e direto", "Equilibrado", "Detalhado"], index=["Curto e direto", "Equilibrado", "Detalhado"].index(cfg["tamanho"]))
+        with c_idi:
+            cfg["idioma"] = st.selectbox("Idioma padrão:", ["Português (Brasil)", "Detecção Automática", "Inglês", "Espanhol"], index=["Português (Brasil)", "Detecção Automática", "Inglês", "Espanhol"].index(cfg["idioma"]))
+        cfg["temperatura"] = st.slider("Nível de criatividade (Temperatura) — 0.0 Preciso até 1.0 Criativo:", 0.0, 1.0, float(cfg["temperatura"]), 0.1)
+        st.success("Alterações de personalidade aplicadas automaticamente!")
+
+    with aba2:
+        st.markdown("#### Memória e Contexto")
+        cfg["janela_contexto"] = st.slider("Janela de contexto (quantas mensagens anteriores a IA lembra):", 2, 30, int(cfg["janela_contexto"]))
+        st.divider()
+        st.markdown("**Gerenciador de Memória (Fatos sobre você)**")
+        usr_at = st.session_state.usuario_logado["usuario"] if st.session_state.usuario_logado else "visitante"
+        novo_fato = st.text_input("Adicionar fato na memória (ex: 'Meu nome é Luca e gosto de Python'):")
+        if st.button("Salvar na Memória", icon=":material/add:", help="Grava esse fato para a IA lembrar sempre"):
+            if novo_fato.strip():
+                conn = sqlite3.connect("memoria.db")
+                conn.execute("INSERT INTO memorias_usr (usuario, fato) VALUES (?, ?)", (usr_at, novo_fato.strip()))
+                conn.commit()
+                conn.close()
+                st.rerun()
+        for fid, ftxt in ler_memorias_usuario():
+            cm1, cm2 = st.columns([0.85, 0.15])
+            cm1.info(ftxt)
+            if cm2.button("", icon=":material/delete:", key=f"del_mem_{fid}", help="Apagar este fato da memória"):
+                conn = sqlite3.connect("memoria.db")
+                conn.execute("DELETE FROM memorias_usr WHERE id=?", (fid,))
+                conn.commit()
+                conn.close()
+                st.rerun()
+
+        st.divider()
+        st.markdown("**Base de Conhecimento (Arquivos PDF / TXT / CSV / Código)**")
+        arq_up = st.file_uploader("Enviar documento para a IA consultar antes de responder:", type=["pdf", "txt", "csv", "py", "md"])
+        if arq_up is not None:
+            texto_extraido = ""
+            if arq_up.name.lower().endswith(".pdf") and TEM_PDF:
+                leitor = PdfReader(arq_up)
+                texto_extraido = "\n".join([p.extract_text() or "" for p in leitor.pages])
+            else:
+                texto_extraido = arq_up.read().decode("utf-8", errors="ignore")
+            cfg["base_conhecimento"] = f"Arquivo ({arq_up.name}):\n{texto_extraido[:6000]}"
+            st.success(f"Arquivo '{arq_up.name}' carregado na base de conhecimento!")
+        if cfg["base_conhecimento"]:
+            if st.button("Remover Arquivo da Base", icon=":material/close:", help="Limpa o arquivo carregado"):
+                cfg["base_conhecimento"] = ""
+                st.rerun()
+
+    with aba3:
+        st.markdown("#### Ferramentas e Integrações (Plugins)")
+        t1, t2, t3, t4 = st.columns(4)
+        cfg["web_ativa"] = t1.toggle("Pesquisa na Web", value=cfg["web_ativa"], help="Busca notícias e preços em tempo real")
+        cfg["img_ativa"] = t2.toggle("Geração de Imagens", value=cfg["img_ativa"], help="Permite criar imagens por descrição")
+        cfg["arq_ativo"] = t3.toggle("Leitura de Arquivos", value=cfg["arq_ativo"], help="Consulta PDFs e documentos anexados")
+        cfg["cod_ativo"] = t4.toggle("Execução / Análise de Código", value=cfg["cod_ativo"], help="Ajuda avançada com programação")
+
+        st.divider()
+        st.markdown("**Conexões Externas (Aplicativos)**")
+        ca1, ca2 = st.columns(2)
+        cfg["conexoes"]["Google Agenda"] = ca1.toggle("Google Agenda", value=cfg["conexoes"]["Google Agenda"])
+        cfg["conexoes"]["Notion"] = ca1.toggle("Notion", value=cfg["conexoes"]["Notion"])
+        cfg["conexoes"]["WhatsApp"] = ca2.toggle("WhatsApp", value=cfg["conexoes"]["WhatsApp"])
+        cfg["conexoes"]["CRM"] = ca2.toggle("CRM", value=cfg["conexoes"]["CRM"])
+
+        st.divider()
+        cfg["modo_aprovacao"] = st.radio("Modo de aprovação de ações:", ["Pedir confirmação antes de agir", "Executar ações automaticamente"], index=0 if cfg["modo_aprovacao"] == "Pedir confirmação antes de agir" else 1)
+
+    with aba4:
+        st.markdown("#### Voz e Interface")
+        cfg["voz_ativa"] = st.toggle("Ativar resposta automática por voz (Áudio nas respostas da IA)", value=cfg["voz_ativa"])
+        cv1, cv2 = st.columns(2)
+        with cv1:
+            sotaque = st.selectbox("Idioma / Voz da IA:", ["Português (Brasil)", "Inglês (EUA)", "Espanhol"])
+            mapa_voz = {"Português (Brasil)": "pt", "Inglês (EUA)": "en", "Espanhol": "es"}
+            cfg["voz_sotaque"] = mapa_voz[sotaque]
+        with cv2:
+            vel = st.selectbox("Velocidade da fala:", ["Normal", "Mais lenta (Didática)"])
+            cfg["voz_lenta"] = (vel == "Mais lenta (Didática)")
+
+        st.divider()
+        st.markdown("**Atalhos e Comandos Rápidos**")
+        st.caption("Digite o comando no chat (ex: `/resumir texto...`) para aplicar automaticamente:")
+        for cmd, desc in list(cfg["atalhos"].items()):
+            st.code(f"{cmd} -> {desc}")
+        nc1, nc2 = st.columns([0.3, 0.7])
+        novo_cmd = nc1.text_input("Novo comando (ex: /traduzir):")
+        nova_acao = nc2.text_input("O que ele faz:")
+        if st.button("Adicionar Atalho", icon=":material/bolt:", help="Cria um novo comando rápido"):
+            if novo_cmd.startswith("/") and nova_acao.strip():
+                cfg["atalhos"][novo_cmd.strip()] = nova_acao.strip()
+                st.rerun()
+
+    with aba5:
+        st.markdown("#### Privacidade, Limites e Segurança")
+        cfg["modo_anonimo"] = st.toggle("Modo temporário (Incógnito) — não salva títulos nem histórico", value=cfg["modo_anonimo"])
+        cfg["limite_msgs_dia"] = st.number_input("Controle de uso (limite máximo de mensagens por sessão):", min_value=5, max_value=1000, value=int(cfg["limite_msgs_dia"]))
+        st.caption(f"Uso atual nesta sessão: **{st.session_state.msgs_hoje} / {cfg['limite_msgs_dia']}** mensagens.")
+
+        st.divider()
+        st.markdown("**Exportação e Exclusão de Dados**")
+        conv_atual = st.session_state.conversas[st.session_state.conversa_atual]
+        json_dados = json.dumps(conv_atual["mensagens"], ensure_ascii=False, indent=2)
+        csv_dados = "autor,mensagem\n" + "\n".join([f"\"{m['role']}\",\"{m['content'].replace(chr(34), chr(39))}\"" for m in conv_atual["mensagens"]])
+        ce1, ce2, ce3 = st.columns(3)
+        ce1.download_button("Exportar JSON", data=json_dados, file_name="lucai_historico.json", mime="application/json", use_container_width=True)
+        ce2.download_button("Exportar CSV", data=csv_dados, file_name="lucai_historico.csv", mime="text/csv", use_container_width=True)
+        if ce3.button("Apagar Todos os Dados", icon=":material/delete_forever:", use_container_width=True, help="Limpa todas as conversas e memórias da conta"):
+            st.session_state.conversas = {}
+            criar_nova_conversa()
+            st.success("Todos os dados da sessão foram limpos!")
+            st.rerun()
+
+if st.session_state.modo_tela == "chat":
     conv = st.session_state.conversas[st.session_state.conversa_atual]
     if st.session_state.usuario_logado and len(conv["mensagens"]) == 1:
-        st.caption("Sugestões completas desbloqueadas:")
         c1, c2, c3, c4 = st.columns(4)
-        if c1.button("Notícias de hoje", icon=":material/newspaper:", use_container_width=True, help="Busca os principais acontecimentos de hoje na internet"):
-            processar_envio_publico("Quais são as principais notícias de hoje no Brasil e no mundo?", modo_escolhido, True)
+        if c1.button("Notícias de hoje", icon=":material/newspaper:", use_container_width=True, help="Busca notícias atuais"):
+            processar_envio_publico("Quais são as principais notícias de hoje?")
             st.rerun()
-        if c2.button("Criar um código", icon=":material/code:", use_container_width=True, help="Pede ajuda para escrever ou corrigir programação"):
-            processar_envio_publico("Quero ajuda para criar ou entender um código de programação.", modo_escolhido, busca_web_ativa)
+        if c2.button("Criar um código", icon=":material/code:", use_container_width=True, help="Ajuda com programação"):
+            processar_envio_publico("Quero ajuda para criar um código em Python.")
             st.rerun()
-        if c3.button("Me ajude a estudar", icon=":material/school:", use_container_width=True, help="Cria resumos e explicações fáceis sobre qualquer matéria"):
-            processar_envio_publico("Me ajude a estudar e resumir um assunto importante hoje!", modo_escolhido, busca_web_ativa)
+        if c3.button("Me ajude a estudar", icon=":material/school:", use_container_width=True, help="Resumos e explicações"):
+            processar_envio_publico("Me ajude a estudar e resumir um assunto importante!")
             st.rerun()
-        if c4.button("Ideias criativas", icon=":material/lightbulb:", use_container_width=True, help="Gera sugestões criativas para projetos, vídeos ou textos"):
-            processar_envio_publico("Preciso de ideias criativas para um projeto novo!", modo_escolhido, busca_web_ativa)
+        if c4.button("Ideias criativas", icon=":material/lightbulb:", use_container_width=True, help="Ideias para projetos"):
+            processar_envio_publico("Preciso de ideias criativas para um projeto novo!")
             st.rerun()
-    elif not st.session_state.usuario_logado:
-        st.caption("Modo simplificado ativo. Toque na seta **>** no canto superior esquerdo para abrir o menu, criar conta ou enviar feedback.")
 
-    for msg in conv["mensagens"]:
+    for idx, msg in enumerate(conv["mensagens"]):
         with st.chat_message(msg["role"], avatar=":material/memory:" if msg["role"] == "assistant" else ":material/person:"):
             st.markdown(msg["content"])
+            if msg["role"] == "assistant" and st.session_state.cfg["voz_ativa"] and idx == len(conv["mensagens"]) - 1 and idx > 0:
+                audio_fp = gerar_audio_voz(msg["content"])
+                if audio_fp:
+                    st.audio(audio_fp, format="audio/mp3")
 
-    if prompt_pub := st.chat_input("Pergunte à L.U.C.AI..."):
-        processar_envio_publico(prompt_pub, modo_escolhido, busca_web_ativa)
-        st.rerun()
-
-elif st.session_state.modo_tela == "compartilhar":
-    st.subheader("Compartilhar L.U.C.AI")
-    st.write("Copie o link oficial abaixo para enviar a **L.U.C.AI v2.0** para seus amigos ou colocar na descrição dos seus vídeos:")
-    st.code("https://streamlit.app", language="text")
-
-elif st.session_state.modo_tela == "instrucoes":
-    st.subheader("Instruções Personalizadas")
-    st.caption("Diga à L.U.C.AI o que você gostaria que ela soubesse sobre você ou como prefere as respostas.")
-    inst_atual = st.session_state.get("inst_usuario", "")
-    nova_inst = st.text_area("Suas preferências (ex: 'Gosto de respostas diretas e estou estudando Python'):", value=inst_atual)
-    if st.button("Salvar Preferências", icon=":material/check:", help="Salva suas instruções para todas as próximas respostas"):
-        st.session_state.inst_usuario = nova_inst.strip()
-        st.success("Instruções salvas! A L.U.C.AI já vai aplicar isso nas próximas respostas.")
-
-elif st.session_state.modo_tela == "arquivo":
-    st.subheader("Analisar Arquivo ou Código")
-    st.caption("Envie um arquivo (.txt, .py, .md, .csv, .html, .json) para a L.U.C.AI resumir, revisar ou explicar.")
-    arq = st.file_uploader("Escolha um arquivo:", type=["txt", "py", "md", "csv", "html", "json"])
