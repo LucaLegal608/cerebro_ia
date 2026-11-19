@@ -102,8 +102,16 @@ st.markdown("""
         font-weight: 600 !important;
         transition: all 0.2s ease-in-out !important;
     }
+    .stButton > button[kind="primary"], [data-testid="stFormSubmitButton"] > button[kind="primary"] {
+        background: linear-gradient(90deg, #0284C7 0%, #2563EB 100%) !important;
+        border: 1.5px solid #00E5FF !important;
+        color: #FFFFFF !important;
+    }
+    .stButton > button[kind="primary"] p, .stButton > button[kind="primary"] span, [data-testid="stFormSubmitButton"] > button[kind="primary"] p {
+        color: #FFFFFF !important;
+    }
     .stButton > button:hover, .stButton > button:active, [data-testid="stFormSubmitButton"] > button:hover {
-        background-color: #00E5FF !important;
+        background: #00E5FF !important;
         border-color: #00B8D4 !important;
         color: #050B14 !important;
         box-shadow: 0 0 18px rgba(0, 229, 255, 0.85) !important;
