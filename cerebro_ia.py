@@ -225,7 +225,7 @@ with st.sidebar:
             st.rerun()
 
     st.divider()
-    with st.expander("⋮ Mais opções (Contas, Feedback e Criador)"):
+    with st.expander("⋮"):
         if st.button("Chat Principal", icon=":material/chat:", use_container_width=True):
             st.session_state.modo_tela = "chat"
             st.rerun()
