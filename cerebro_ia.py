@@ -48,7 +48,7 @@ def obter_data_hora_atual():
     dias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.2**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — agora gerando **imagens reais**, lendo arquivos, com créditos **100% gratuitos** e personalização total no menu **⋮**. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.2**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — gerando **imagens reais**, lendo arquivos, com créditos **100% gratuitos** e personalização total no menu **⋮**. Como posso ajudar hoje?"
 
 CFG_PADRAO = {
     "system_prompt": "",
@@ -383,7 +383,7 @@ if st.session_state.modo_tela == "chat":
         with st.chat_message(msg["role"], avatar=":material/memory:" if msg["role"] == "assistant" else ":material/person:"):
             texto_msg = msg["content"]
             match_img = re.search(r"\[GERAR_IMAGEM:\s*(.*?)\]", texto_msg, re.DOTALL)
-                               if match_img:
+            if match_img:
                 prompt_en = match_img.group(1).strip()
                 texto_limpo = re.sub(r"\[GERAR_IMAGEM:.*?\]", "", texto_msg, flags=re.DOTALL).strip()
                 if texto_limpo:
@@ -401,7 +401,6 @@ if st.session_state.modo_tela == "chat":
                         st.image(url_img, caption=f"Arte gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
             else:
                 st.markdown(texto_msg)
-
 
     if prompt_pub := st.chat_input("Pergunte à L.U.C.AI ou peça para criar uma imagem..."):
         processar_envio_publico(prompt_pub)
@@ -437,8 +436,8 @@ elif st.session_state.modo_tela == "contas":
                     res = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=? AND senha=?", (u_login.strip(), s_login.strip())).fetchone()
                     conn.close()
                     if res:
-                        st.session_state.usuario_logado = {"usuario": res, "nome": res}
-                        st.query_params["sessao"] = res
+                        st.session_state.usuario_logado = {"usuario": res[0], "nome": res[1]}
+                        st.query_params["sessao"] = res[0]
                         st.session_state.modo_tela = "chat"
                         st.rerun()
                     else:
@@ -484,8 +483,8 @@ elif st.session_state.modo_tela == "ver_feedbacks":
         lista_fb = conn.execute("SELECT id, autor, mensagem, data FROM feedbacks ORDER BY id DESC").fetchall()
         conn.close()
         for item in lista_fb:
-            st.markdown(f"**#{item} • {item}** *({item})*")
-            st.info(item)
+            st.markdown(f"**#{item[0]} • {item[1]}** *({item[3]})*")
+            st.info(item[2])
 
 elif st.session_state.modo_tela == "estudio":
     st.subheader("Estúdio do Criador (Acesso Restrito)")
