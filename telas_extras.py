@@ -12,28 +12,36 @@ except ImportError:
     TEM_PDF = False
 
 def gerar_imagem_nano_banana(prompt_en):
-    chave = st.secrets.get("GEMINI_API_KEY", "").strip()
-    if not chave:
-        return None, "Configure a chave gratuita `GEMINI_API_KEY` (do Google AI Studio) nos Secrets do Streamlit."
-    host = "".join(["generativelanguage", ".", "googleapis", ".", "com"])
-    caminho = "/v1beta/models/gemini-2.5-flash-image:generateContent"
-    url = f"https://{host}{caminho}?key={chave}"
-    payload = {
-        "contents": [{"parts": [{"text": f"Generate a high quality image of: {prompt_en}"}]}],
-        "generationConfig": {"responseModalities": ["IMAGE"]}
-    }
+    import urllib.parse
+    import time
+    prompt_limpo = urllib.parse.quote(prompt_en[:120])
+    host_poll = "".join(["image", ".", "pollinations", ".", "ai"])
+    url_direta = f"https://{host_poll}/prompt/{prompt_limpo}?width=768&height=768&nologo=true"
+    
+    # Tenta gerar via AI Horde (100% gratuito, sem chave e sem cartão)
     try:
-        r = requests.post(url, json=payload, timeout=30)
-        if r.status_code == 200:
-            partes = r.json()["candidates"]["content"]["parts"]
-            for p in partes:
-                if "inlineData" in p:
-                    b64 = p["inlineData"]["data"]
-                    return base64.b64decode(b64), None
-            return None, "O modelo não retornou imagem."
-        return None, f"Erro {r.status_code}: {r.text[:180]}"
-    except Exception as e:
-        return None, f"Erro de conexão: {e}"
+        host_horde = "".join(["stablehorde", ".", "net"])
+        resp_post = requests.post(
+            f"https://{host_horde}/api/v2/generate/async",
+            headers={"apikey": "0000000000", "Content-Type": "application/json"},
+            json={"prompt": prompt_en, "params": {"width": 512, "height": 512, "steps": 20}},
+            timeout=15
+        )
+        if resp_post.status_code == 202:
+            job_id = resp_post.json().get("id")
+            for _ in range(12):
+                time.sleep(2.5)
+                check = requests.get(f"https://{host_horde}/api/v2/generate/status/{job_id}", timeout=10).json()
+                if check.get("done") and check.get("generations"):
+                    img_url = check["generations"]["img"]
+                    img_bytes = requests.get(img_url, timeout=15).content
+                    return img_bytes, None
+    except Exception:
+        pass
+
+    # Reserva instantânea direto no navegador do usuário (sem bloqueio de servidor)
+    return url_direta, None
+
 
 def exibir_tela_creditos(obter_creditos, alterar_creditos, senha_criador):
     st.subheader("Central de Créditos 100% Gratuitos — L.U.C.AI ⚡")
