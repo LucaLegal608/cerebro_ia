@@ -92,15 +92,16 @@ def exibir_tela_configuracoes(ler_memorias_usuario, criar_nova_conversa):
                 conn.commit()
                 conn.close()
                 st.rerun()
-        for fid, ftxt in ler_memorias_usuario():
-            cm1, cm2 = st.columns([0.85, 0.15])
-            cm1.info(ftxt)
-            if cm2.button("", icon=":material/delete:", key=f"del_mem_{fid}"):
-                conn = sqlite3.connect("memoria.db")
-                conn.execute("DELETE FROM memorias_usr WHERE id=?", (fid,))
-                conn.commit()
-                conn.close()
-                st.rerun()
+     def obter_creditos():
+    if st.session_state.usuario_logado:
+        conn = sqlite3.connect("memoria.db")
+        row = conn.execute("SELECT creditos FROM usuarios WHERE usuario=?", (st.session_state.usuario_logado["usuario"],)).fetchone()
+        conn.close()
+        if row and row[0] is not None:
+            return int(row[0])
+        return 10
+    return int(st.session_state.creditos_visitante)
+
 
         arq_up = st.file_uploader("Enviar documento (PDF / TXT / CSV / Código):", type=["pdf", "txt", "csv", "py", "md"])
         if arq_up is not None:
