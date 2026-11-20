@@ -383,25 +383,31 @@ if st.session_state.modo_tela == "chat":
         with st.chat_message(msg["role"], avatar=":material/memory:" if msg["role"] == "assistant" else ":material/person:"):
             texto_msg = msg["content"]
             match_img = re.search(r"\[GERAR_IMAGEM:\s*(.*?)\]", texto_msg, re.DOTALL)
-            if match_img:
-                prompt_en = match_img.group(1).strip()[:80]
+                      if match_img:
+                prompt_en = match_img.group(1).strip()
                 texto_limpo = re.sub(r"\[GERAR_IMAGEM:.*?\]", "", texto_msg, flags=re.DOTALL).strip()
                 if texto_limpo:
                     st.markdown(texto_limpo)
-                url_img = f"https://pollinations.ai{urllib.parse.quote(prompt_en)}?width=768&height=768&nologo=true&model=flux&seed={idx + 10}"
-                try:
-                    resp_img = requests.get(url_img, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
-                    if resp_img.status_code == 200 and "image" in resp_img.headers.get("Content-Type", ""):
-                        st.image(resp_img.content, caption=f"Arte gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
-                        st.download_button("Baixar Imagem", data=resp_img.content, file_name=f"lucai_arte_{idx}.jpg", mime="image/jpeg", key=f"dl_img_{idx}")
-                    else:
-                        st.warning("O servidor gratuito de imagens está sobrecarregado no momento. Abra no link direto:")
-                        st.markdown(f"[Abrir imagem gerada no navegador]({url_img})")
-                except Exception:
-                    st.warning("Tempo limite atingido ao gerar a imagem.")
-                    st.markdown(f"[Tentar abrir imagem no navegador]({url_img})")
-            else:
-                st.markdown(texto_msg)
+                hf_token = st.secrets.get("HF_TOKEN", "")
+                if not hf_token:
+                    st.warning("Configure a chave gratuita `HF_TOKEN` nos Secrets do Streamlit para gerar imagens em alta velocidade.")
+                else:
+                    with st.spinner("Criando imagem em alta definição..."):
+                        try:
+                            api_hf = "https://huggingface.co"
+                            resp_hf = requests.post(
+                                api_hf,
+                                headers={"Authorization": f"Bearer {hf_token}"},
+                                json={"inputs": prompt_en},
+                                timeout=30
+                            )
+                            if resp_hf.status_code == 200 and "image" in resp_hf.headers.get("Content-Type", ""):
+                                st.image(resp_hf.content, caption=f"Arte gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
+                                st.download_button("Baixar Imagem", data=resp_hf.content, file_name=f"lucai_arte_{idx}.jpg", mime="image/jpeg", key=f"dl_img_{idx}")
+                            else:
+                                st.error(f"Não foi possível gerar agora (Status {resp_hf.status_code}). Tente novamente em instantes.")
+                        except Exception as e:
+                            st.error(f"Erro na conexão de imagem: {e}")
 
     if prompt_pub := st.chat_input("Pergunte à L.U.C.AI ou peça para criar uma imagem..."):
         processar_envio_publico(prompt_pub)
