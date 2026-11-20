@@ -376,22 +376,19 @@ def processar_envio_publico(texto_usuario):
     st.caption(f"Status: Online • {VERSAO_IA}")
     st.caption("Criado por Luca de Brito Ferreira")
 
-st.markdown(f"""
-<div class="gemini-header">
-    <div class="chip-emblem">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-            <rect x="6" y="6" width="12" height="12" rx="2.5" stroke="url(#grad_chip)" stroke-width="2"/>
-            <rect x="9.5" y="9.5" width="5" height="5" rx="1" fill="#00F3FF"/>
-            <path d="M9 2V5M15 2V5M9 19V22M15 19V22M2 9H5M2 15H5M19 9H22M19 15H22" stroke="#00F3FF" stroke-width="2" stroke-linecap="round"/>
-            <defs><linearGradient id="grad_chip" x1="6" y1="6" x2="18" y2="18" gradientUnits="userSpaceOnUse"><stop stop-color="#00F3FF"/><stop offset="1" stop-color="#E0F2FE"/></linearGradient></defs>
-        </svg>
-    </div>
-    <div>
-        <div><span class="gemini-title">L.U.C.AI</span><span class="gemini-sigla">- Logica Unificada de Conhecimento e Acao Inteligente</span><span class="badge-v3">{VERSAO_IA}</span></div>
-        <div class="gemini-subtitle">Sua assistente inteligente completa para ajudar com qualquer coisa do dia a dia.</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+header_html = (
+    '<div class="gemini-header">'
+    '<div class="chip-emblem">'
+    '<svg width="28" height="28" viewBox="0 0 24 24" fill="none">'
+    '<rect x="6" y="6" width="12" height="12" rx="2.5" stroke="#00F3FF" stroke-width="2"/>'
+    '<rect x="9.5" y="9.5" width="5" height="5" rx="1" fill="#00F3FF"/>'
+    '<path d="M9 2V5M15 2V5M9 19V22M15 19V22M2 9H5M2 15H5M19 9H22M19 15H22" stroke="#00F3FF" stroke-width="2" stroke-linecap="round"/>'
+    '</svg></div><div>'
+    f'<div><span class="gemini-title">L.U.C.AI</span><span class="gemini-sigla">- Logica Unificada de Conhecimento e Acao Inteligente</span><span class="badge-v3">{VERSAO_IA}</span></div>'
+    '<div class="gemini-subtitle">Sua assistente inteligente completa para ajudar com qualquer coisa do dia a dia.</div>'
+    '</div></div>'
+)
+st.markdown(header_html, unsafe_allow_html=True)
 
 if st.session_state.modo_tela != "chat":
     if st.button("Voltar ao Chat", icon=":material/arrow_back:", help="Voltar para a conversa"):
