@@ -374,8 +374,6 @@ def processar_envio_publico(texto_usuario):
 
     st.divider()
     st.caption(f"Status: Online • {VERSAO_IA}")
-     st.divider()
-    st.caption(f"Status: Online • {VERSAO_IA}")
     st.caption("Criado por Luca de Brito Ferreira")
 
 st.markdown(f"""
