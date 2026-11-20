@@ -236,9 +236,20 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
             time.sleep(1)
     return f"Não foi possível responder agora. Detalhe: {ultimo_erro}"
 
+def precisa_pesquisar(texto):
+    t = texto.lower()
+    gatilhos = [
+        "pesquise", "busque", "procure", "notícia", "noticia", "hoje", "ontem",
+        "amanhã", "atual", "preço", "valor", "cotação", "dólar", "clima",
+        "tempo", "previsão", "resultado", "placar", "jogo", "quem ganhou",
+        "lançamento", "2025", "2026", "onde fica", "site oficial", "link"
+    ]
+    return any(g in t for g in gatilhos)
+
 def processar_envio_publico(texto_usuario):
     cfg = st.session_state.cfg
-    custo = 2 if (cfg["web_ativa"] or cfg["base_conhecimento"]) else 1
+    vai_buscar_web = cfg["web_ativa"] and precisa_pesquisar(texto_usuario)
+    custo = 2 if (vai_buscar_web or cfg["base_conhecimento"]) else 1
 
     saldo = obter_creditos()
     if saldo < custo:
@@ -265,8 +276,8 @@ def processar_envio_publico(texto_usuario):
     mems_usr = "\n".join([f"- {f}" for _, f in ler_memorias_usuario()])
     apps_ativos = [k for k, v in cfg["conexoes"].items() if v]
     
-    bloco_regras = f"""Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa com {nome_usr}.
-    - REGRA SOBRE CRÉDITOS: Todos os créditos da L.U.C.AI são 100% GRATUITOS! Visitantes ganham 5 créditos grátis, contas criadas ganham 10 créditos grátis e, se precisarem de mais, basta pedir um código de recarga gratuito para o criador Luca Legal (nos comentários do YouTube ou redes sociais) e resgatar na aba 'Resgatar Créditos ⚡' no menu '⋮'.
+    bloco_regras = f"""Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa com {nome_usr} em português natural e fluente.
+    - REGRA SOBRE CRÉDITOS: Todos os créditos da L.U.C.AI são 100% GRATUITOS! Visitantes ganham 5 créditos grátis, contas criadas ganham 10 créditos grátis e, se precisarem de mais, basta pedir um código de recarga gratuito para o criador Luca Legal e resgatar na aba 'Resgatar Créditos ⚡' no menu '⋮'.
     - IDIOMA: {cfg['idioma']} | TOM DE VOZ: {cfg['tom_voz']} | TAMANHO: {cfg['tamanho']}.
     - INSTRUÇÕES DO USUÁRIO: {cfg['system_prompt'] or 'Nenhuma regra extra.'}
     - MEMÓRIA SOBRE O USUÁRIO: {mems_usr or 'Nenhum fato salvo.'}
@@ -274,7 +285,7 @@ def processar_envio_publico(texto_usuario):
     - INTEGRAÇÕES: {', '.join(apps_ativos) if apps_ativos else 'Nenhuma'} | APROVAÇÃO: {cfg['modo_aprovacao']}.
     - CRIADOR: {ler_dna_criador()}. MEMÓRIAS GERAIS: {banco_memoria.buscar_todas_notas()}."""
 
-    dados_web = pesquisar_na_web(texto_usuario) if cfg["web_ativa"] else ""
+    dados_web = pesquisar_na_web(texto_usuario) if vai_buscar_web else ""
     resp = gerar_resposta(texto_usuario, conv["mensagens"][:-1], bloco_regras + dados_web, cfg["temperatura"])
     alterar_creditos(-custo)
     conv["mensagens"].append({"role": "assistant", "content": resp})
