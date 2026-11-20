@@ -3,6 +3,7 @@ import re
 import json
 import time
 import uuid
+import base64
 import sqlite3
 import urllib.parse
 import requests
@@ -259,7 +260,6 @@ def processar_envio_publico(texto_usuario):
     conv["mensagens"].append({"role": "user", "content": texto_usuario})
     st.session_state.msgs_hoje += 1
 
-    # Interceptação automática de pedidos de imagem (sem deixar a IA recusar)
     gatilhos_img = ["crie uma imagem", "gere uma imagem", "gerar uma imagem", "criar uma imagem", "desenhe", "faça uma imagem", "faca uma imagem", "crie uma arte", "gere uma arte"]
     txt_lower = texto_usuario.lower()
     if cfg["img_ativa"] and any(g in txt_lower for g in gatilhos_img):
@@ -288,6 +288,7 @@ def processar_envio_publico(texto_usuario):
 
     dados_web = pesquisar_na_web(texto_usuario) if cfg["web_ativa"] else ""
     resp = gerar_resposta(texto_usuario, conv["mensagens"][:-1], bloco_regras + dados_web, cfg["temperatura"])
+    alterar_creditos(-custo)
 
 with st.sidebar:
     st.markdown("### :material/memory: L.U.C.AI")
@@ -412,15 +413,17 @@ if st.session_state.modo_tela == "chat":
                             api_hf = "https://huggingface.co"
                             resp_hf = requests.post(
                                 api_hf,
-                                headers={"Authorization": f"Bearer {hf_token}"},
-                                json={"inputs": prompt_en},
+                                headers={"Authorization": f"Bearer {hf_token}", "Content-Type": "application/json"},
+                                json={"model": "black-forest-labs/FLUX.1-schnell", "prompt": prompt_en, "response_format": "b64_json"},
                                 timeout=30
                             )
-                            if resp_hf.status_code == 200 and "image" in resp_hf.headers.get("Content-Type", ""):
-                                st.image(resp_hf.content, caption=f"Arte gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
-                                st.download_button("Baixar Imagem", data=resp_hf.content, file_name=f"lucai_arte_{idx}.jpg", mime="image/jpeg", key=f"dl_img_{idx}")
+                            if resp_hf.status_code == 200:
+                                img_b64 = resp_hf.json()["data"][0]["b64_json"]
+                                img_bytes = base64.b64decode(img_b64)
+                                st.image(img_bytes, caption=f"Arte gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
+                                st.download_button("Baixar Imagem", data=img_bytes, file_name=f"lucai_arte_{idx}.png", mime="image/png", key=f"dl_img_{idx}")
                             else:
-                                st.error(f"Não foi possível gerar agora (Status {resp_hf.status_code}).")
+                                st.error(f"Status {resp_hf.status_code}: {resp_hf.text[:200]}")
                         except Exception as e:
                             st.error(f"Erro na conexão de imagem: {e}")
             else:
