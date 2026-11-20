@@ -137,46 +137,36 @@ def excluir_conversa(id_conv):
     else:
         st.session_state.conversas[id_conv] = {"titulo": "Nova conversa", "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]}
 
-st.markdown("""
-<style>
-    @import url('https://googleapis.com');
-    html, body, .stApp { font-family: 'Plus Jakarta Sans', sans-serif !important; }
-    .gemini-header { display: flex; align-items: center; gap: 14px; padding: 0.5rem 0.2rem 0.9rem 0.2rem; margin-bottom: 0.8rem; border-bottom: 1px solid rgba(128, 128, 128, 0.25); }
-    .chip-emblem { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #0284C7 0%, #38BDF8 50%, #7C3AED 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0, 229, 255, 0.35); flex-shrink: 0; }
-    .gemini-title { font-size: 1.95rem; font-weight: 700; background: linear-gradient(90deg, #0284C7 0%, #00B4D8 50%, #9333EA 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent !important; display: inline-block; margin: 0; line-height: 1.2; }
-    .gemini-sigla { font-size: 0.98rem; opacity: 0.8; font-weight: 500; margin-left: 6px; }
-    .badge-v3 { background-color: rgba(0, 229, 255, 0.15) !important; color: #00B4D8 !important; border: 1px solid #00B4D8 !important; font-size: 0.74rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; vertical-align: middle; margin-left: 8px; }
-    .gemini-subtitle { opacity: 0.8; font-size: 0.92rem; margin-top: 0.2rem; }
-    @media (max-width: 768px) {
-        .gemini-header { gap: 10px; padding-top: 0.2rem; }
-        .chip-emblem { width: 40px; height: 40px; border-radius: 12px; }
-        .gemini-title { font-size: 1.45rem; }
-        .gemini-sigla { display: block; margin-left: 0; font-size: 0.8rem; }
-        .gemini-subtitle { font-size: 0.82rem; }
-        .block-container { padding-top: 2.8rem !important; padding-left: 0.8rem !important; padding-right: 0.8rem !important; }
-    }
-    .stButton > button, [data-testid="stFormSubmitButton"] > button, [data-testid="stDownloadButton"] > button {
-        border-radius: 14px !important; border: 1.5px solid rgba(128, 128, 128, 0.35) !important; font-weight: 600 !important; transition: all 0.2s ease !important;
-    }
-    .stButton > button:hover, [data-testid="stFormSubmitButton"] > button:hover, [data-testid="stDownloadButton"] > button:hover {
-        border-color: #00B4D8 !important;
-    }
-    @keyframes pulsoCiano {
-        0% { transform: scale(1); box-shadow: 0 0 12px rgba(0, 229, 255, 0.75); }
-        45% { transform: scale(0.93); box-shadow: 0 0 36px rgba(0, 243, 255, 1), 0 0 14px #FFFFFF; }
-        80% { transform: scale(1.03); box-shadow: 0 0 24px rgba(0, 243, 255, 0.95); }
-        100% { transform: scale(1); box-shadow: 0 0 16px rgba(0, 229, 255, 0.8); }
-    }
-    button[kind="primary"], [data-testid="stBaseButton-primary"] {
-        background: linear-gradient(90deg, #0096C7 0%, #00E5FF 100%) !important; border: 1.5px solid #00F3FF !important; color: #031525 !important; font-weight: 700 !important; box-shadow: 0 0 15px rgba(0, 229, 255, 0.65) !important; transition: all 0.25s ease !important;
-    }
-    button[kind="primary"] *, [data-testid="stBaseButton-primary"] * { color: #031525 !important; }
-    button[kind="primary"]:hover, [data-testid="stBaseButton-primary"]:hover { box-shadow: 0 0 26px rgba(0, 243, 255, 0.95), 0 0 10px rgba(0, 243, 255, 0.8) !important; transform: translateY(-2px) !important; }
-    button[kind="primary"]:active, [data-testid="stBaseButton-primary"]:active { animation: pulsoCiano 0.4s ease-out !important; }
-    [data-testid="stChatMessage"] { border-radius: 18px !important; padding: 0.9rem 1rem !important; margin-bottom: 0.65rem !important; }
-    [data-testid="stChatInput"] { border-radius: 22px !important; }
-</style>
-""", unsafe_allow_html=True)
+css_estilo = (
+    "<style>"
+    "@import url('https://googleapis.com');"
+    "html, body, .stApp { font-family: 'Plus Jakarta Sans', sans-serif !important; }"
+    ".gemini-header { display: flex; align-items: center; gap: 14px; padding: 0.5rem 0.2rem 0.9rem 0.2rem; margin-bottom: 0.8rem; border-bottom: 1px solid rgba(128, 128, 128, 0.25); }"
+    ".chip-emblem { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #0284C7 0%, #38BDF8 50%, #7C3AED 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0, 229, 255, 0.35); flex-shrink: 0; }"
+    ".gemini-title { font-size: 1.95rem; font-weight: 700; background: linear-gradient(90deg, #0284C7 0%, #00B4D8 50%, #9333EA 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent !important; display: inline-block; margin: 0; line-height: 1.2; }"
+    ".gemini-sigla { font-size: 0.98rem; opacity: 0.8; font-weight: 500; margin-left: 6px; }"
+    ".badge-v3 { background-color: rgba(0, 229, 255, 0.15) !important; color: #00B4D8 !important; border: 1px solid #00B4D8 !important; font-size: 0.74rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; vertical-align: middle; margin-left: 8px; }"
+    ".gemini-subtitle { opacity: 0.8; font-size: 0.92rem; margin-top: 0.2rem; }"
+    "@media (max-width: 768px) {"
+    ".gemini-header { gap: 10px; padding-top: 0.2rem; }"
+    ".chip-emblem { width: 40px; height: 40px; border-radius: 12px; }"
+    ".gemini-title { font-size: 1.45rem; }"
+    ".gemini-sigla { display: block; margin-left: 0; font-size: 0.8rem; }"
+    ".gemini-subtitle { font-size: 0.82rem; }"
+    ".block-container { padding-top: 2.8rem !important; padding-left: 0.8rem !important; padding-right: 0.8rem !important; }"
+    "}"
+    ".stButton > button, [data-testid='stFormSubmitButton'] > button, [data-testid='stDownloadButton'] > button { border-radius: 14px !important; border: 1.5px solid rgba(128, 128, 128, 0.35) !important; font-weight: 600 !important; transition: all 0.2s ease !important; }"
+    ".stButton > button:hover, [data-testid='stFormSubmitButton'] > button:hover, [data-testid='stDownloadButton'] > button:hover { border-color: #00B4D8 !important; }"
+    "@keyframes pulsoCiano { 0% { transform: scale(1); box-shadow: 0 0 12px rgba(0, 229, 255, 0.75); } 45% { transform: scale(0.93); box-shadow: 0 0 36px rgba(0, 243, 255, 1), 0 0 14px #FFFFFF; } 80% { transform: scale(1.03); box-shadow: 0 0 24px rgba(0, 243, 255, 0.95); } 100% { transform: scale(1); box-shadow: 0 0 16px rgba(0, 229, 255, 0.8); } }"
+    "button[kind='primary'], [data-testid='stBaseButton-primary'] { background: linear-gradient(90deg, #0096C7 0%, #00E5FF 100%) !important; border: 1.5px solid #00F3FF !important; color: #031525 !important; font-weight: 700 !important; box-shadow: 0 0 15px rgba(0, 229, 255, 0.65) !important; transition: all 0.25s ease !important; }"
+    "button[kind='primary'] *, [data-testid='stBaseButton-primary'] * { color: #031525 !important; }"
+    "button[kind='primary']:hover, [data-testid='stBaseButton-primary']:hover { box-shadow: 0 0 26px rgba(0, 243, 255, 0.95), 0 0 10px rgba(0, 243, 255, 0.8) !important; transform: translateY(-2px) !important; }"
+    "button[kind='primary']:active, [data-testid='stBaseButton-primary']:active { animation: pulsoCiano 0.4s ease-out !important; }"
+    "[data-testid='stChatMessage'] { border-radius: 18px !important; padding: 0.9rem 1rem !important; margin-bottom: 0.65rem !important; }"
+    "[data-testid='stChatInput'] { border-radius: 22px !important; }"
+    "</style>"
+)
+st.markdown(css_estilo, unsafe_allow_html=True)
 
 def pesquisar_na_web(consulta):
     if not TEM_BUSCA:
@@ -287,13 +277,13 @@ def processar_envio_publico(texto_usuario):
     mems_usr = "\n".join([f"- {f}" for _, f in ler_memorias_usuario()])
     apps_ativos = [k for k, v in cfg["conexoes"].items() if v]
     
-    bloco_regras = f"""Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa com {nome_usr} em português natural e fluente.
-    - REGRA SOBRE CRÉDITOS: Todos os créditos da L.U.C.AI são 100% GRATUITOS! Visitantes ganham 5 créditos grátis, contas criadas ganham 10 créditos grátis e, se precisarem de mais, basta pedir um código de recarga gratuito para o criador Luca Legal e resgatar na aba 'Resgatar Créditos ⚡' no menu '⋮'.
-    - IDIOMA: {cfg['idioma']} | TOM DE VOZ: {cfg['tom_voz']} | TAMANHO: {cfg['tamanho']}.
-    - INSTRUÇÕES DO USUÁRIO: {cfg['system_prompt'] or 'Nenhuma regra extra.'}
-    - MEMÓRIA SOBRE O USUÁRIO: {mems_usr or 'Nenhum fato salvo.'}
-    - ARQUIVO ANEXADO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum.'}
-    - INTEGRAÇÕES: {', '.join(apps_ativos) if apps_ativos else 'Nenhuma'} | APROVAÇÃO: {cfg['modo_aprovacao']}.
+    bloco_regras = (
+        f"Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa com {nome_usr} em português natural e fluente.\n"
+        "- REGRA SOBRE CRÉDITOS: Todos os créditos da L.U.C.AI são 100% GRATUITOS! Visitantes ganham 5 créditos grátis, contas criadas ganham 10 créditos grátis e, se precisarem de mais, basta pedir um código de recarga gratuito para o criador Luca Legal e resgatar na aba 'Resgatar Créditos ⚡' no menu '⋮'.\n"
+        f"- IDIOMA: {cfg['idioma']} | TOM DE VOZ: {cfg['tom_voz']} | TAMANHO: {cfg['tamanho']}.\n"
+        f"- INSTRUÇÕES DO USUÁRIO: {cfg['system_prompt'] or 'Nenhuma regra extra.'}\n"
+        f"- MEMÓRIA SOBRE O USUÁRIO: {mems_usr or 'Nenhum fato salvo.'}\n"
+        f"- ARQUIVO ANEXADO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum.'}\n"
 
     with st.sidebar:
     st.markdown("### :material/memory: L.U.C.AI")
@@ -394,7 +384,6 @@ if st.session_state.modo_tela != "chat":
     if st.button("Voltar ao Chat", icon=":material/arrow_back:", help="Voltar para a conversa"):
         st.session_state.modo_tela = "chat"
         st.rerun()
-
 
 if st.session_state.modo_tela == "chat":
     conv = st.session_state.conversas[st.session_state.conversa_atual]
