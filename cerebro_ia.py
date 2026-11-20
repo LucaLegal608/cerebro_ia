@@ -374,6 +374,8 @@ def processar_envio_publico(texto_usuario):
 
     st.divider()
     st.caption(f"Status: Online • {VERSAO_IA}")
+     st.divider()
+    st.caption(f"Status: Online • {VERSAO_IA}")
     st.caption("Criado por Luca de Brito Ferreira")
 
 st.markdown(f"""
@@ -387,7 +389,7 @@ st.markdown(f"""
         </svg>
     </div>
     <div>
-        <div><span class="gemini-title">L.U.C.AI</span><span class="gemini-sigla">— Lógica Unificada de Conhecimento e Ação Inteligente</span><span class="badge-v3">{VERSAO_IA}</span></div>
+        <div><span class="gemini-title">L.U.C.AI</span><span class="gemini-sigla">- Logica Unificada de Conhecimento e Acao Inteligente</span><span class="badge-v3">{VERSAO_IA}</span></div>
         <div class="gemini-subtitle">Sua assistente inteligente completa para ajudar com qualquer coisa do dia a dia.</div>
     </div>
 </div>
@@ -397,6 +399,7 @@ if st.session_state.modo_tela != "chat":
     if st.button("Voltar ao Chat", icon=":material/arrow_back:", help="Voltar para a conversa"):
         st.session_state.modo_tela = "chat"
         st.rerun()
+
 
 if st.session_state.modo_tela == "chat":
     conv = st.session_state.conversas[st.session_state.conversa_atual]
