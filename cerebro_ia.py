@@ -207,33 +207,44 @@ def ler_dna_criador():
         return "Projeto criado por Luca de Brito Ferreira."
 
 def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
-    sistema_completo = f"{instrucao_sistema}\n\n[DADO INTERNO SILENCIOSO - DATA E HORA ATUAL EM BRASÍLIA: {obter_data_hora_atual()}. NUNCA imprima esse colchete na resposta.]"
+    regra_idioma = "\n\n[INSTRUÇÃO DE QUALIDADE]: Responda SEMPRE em português do Brasil natural, fluido, inteligente e bem escrito. NUNCA coloque frases entre colchetes [...] no final da resposta e NUNCA invente que pesquisou no Google ou Mercado Livre se não houver dados de pesquisa acima."
+    sistema_completo = f"{instrucao_sistema}{regra_idioma}\n\n[DATA E HORA ATUAL EM BRASÍLIA: {obter_data_hora_atual()}.]"
     mensagens_formatadas = [{"role": "system", "content": sistema_completo}]
     janela = st.session_state.cfg["janela_contexto"] if st.session_state.usuario_logado else 4
     for item in historico[-janela:]:
         mensagens_formatadas.append({"role": item["role"], "content": item["content"]})
     mensagens_formatadas.append({"role": "user", "content": mensagem})
 
-    modelos = []
+    preferidos = [
+        "llama-3.3-70b-versatile",
+        "meta-llama/llama-4-maverick-17b-128e-instruct",
+        "meta-llama/llama-4-scout-17b-16e-instruct",
+        "llama-3.1-70b-versatile",
+        "llama3-70b-8192"
+    ]
+    disponiveis = []
     try:
         for m in client.models.list().data:
-            if not any(x in m.id.lower() for x in ["whisper", "guard", "tts", "vision", "compound"]):
-                modelos.append(m.id)
+            if not any(x in m.id.lower() for x in ["whisper", "guard", "tts", "vision", "compound", "8b"]):
+                disponiveis.append(m.id)
     except Exception as e:
         return f"Erro na chave da API: {e}"
 
-    modelos.sort(key=lambda x: ("llama-3.3" not in x and "70b" not in x, "qwen" in x or "deepseek" in x, x))
+    lista_final = [m for m in preferidos if m in disponiveis] + [m for m in disponiveis if m not in preferidos]
+    if not lista_final:
+        lista_final = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+
     ultimo_erro = ""
-    for modelo in modelos:
+    for modelo in lista_final:
         try:
             resposta = client.chat.completions.create(model=modelo, messages=mensagens_formatadas, temperature=temperatura)
             for escolha in resposta.choices:
                 conteudo = escolha.message.content
                 if conteudo and conteudo.strip():
-                    return conteudo
+                    return conteudo.strip()
         except Exception as erro:
             ultimo_erro = str(erro)
-            time.sleep(1)
+            time.sleep(0.5)
     return f"Não foi possível responder agora. Detalhe: {ultimo_erro}"
 
 def precisa_pesquisar(texto):
@@ -283,14 +294,8 @@ def processar_envio_publico(texto_usuario):
     - MEMÓRIA SOBRE O USUÁRIO: {mems_usr or 'Nenhum fato salvo.'}
     - ARQUIVO ANEXADO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum.'}
     - INTEGRAÇÕES: {', '.join(apps_ativos) if apps_ativos else 'Nenhuma'} | APROVAÇÃO: {cfg['modo_aprovacao']}.
-    - CRIADOR: {ler_dna_criador()}. MEMÓRIAS GERAIS: {banco_memoria.buscar_todas_notas()}."""
 
-    dados_web = pesquisar_na_web(texto_usuario) if vai_buscar_web else ""
-    resp = gerar_resposta(texto_usuario, conv["mensagens"][:-1], bloco_regras + dados_web, cfg["temperatura"])
-    alterar_creditos(-custo)
-    conv["mensagens"].append({"role": "assistant", "content": resp})
-
-with st.sidebar:
+    with st.sidebar:
     st.markdown("### :material/memory: L.U.C.AI")
     st.caption("Lógica Unificada de Conhecimento e Ação Inteligente")
     st.caption(f":material/schedule: {obter_data_hora_atual()}")
