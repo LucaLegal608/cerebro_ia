@@ -276,7 +276,6 @@ def processar_envio_publico(texto_usuario):
     nome_usr = st.session_state.usuario_logado["nome"] if st.session_state.usuario_logado else "Visitante"
     mems_usr = "\n".join([f"- {f}" for _, f in ler_memorias_usuario()])
     apps_ativos = [k for k, v in cfg["conexoes"].items() if v]
-    
     bloco_regras = (
         f"Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa com {nome_usr} em português natural e fluente.\n"
         "- REGRA SOBRE CRÉDITOS: Todos os créditos da L.U.C.AI são 100% GRATUITOS! Visitantes ganham 5 créditos grátis, contas criadas ganham 10 créditos grátis e, se precisarem de mais, basta pedir um código de recarga gratuito para o criador Luca Legal e resgatar na aba 'Resgatar Créditos ⚡' no menu '⋮'.\n"
