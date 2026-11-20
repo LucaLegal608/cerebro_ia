@@ -13,10 +13,14 @@ import banco_memoria
 import telas_extras
 
 try:
-    from duckduckgo_search import DDGS
+    from ddgs import DDGS
     TEM_BUSCA = True
 except ImportError:
-    TEM_BUSCA = False
+    try:
+        from duckduckgo_search import DDGS
+        TEM_BUSCA = True
+    except ImportError:
+        TEM_BUSCA = False
 
 st.set_page_config(page_title="L.U.C.AI (v3.2) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
 banco_memoria.iniciar_banco()
@@ -48,7 +52,7 @@ def obter_data_hora_atual():
     dias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.2**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — gerando **imagens reais**, lendo arquivos, com créditos **100% gratuitos** e personalização total no menu **⋮**. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.2**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — gerando **imagens reais**, lendo arquivos, pesquisando na web, com créditos **100% gratuitos** e personalização total no menu **⋮**. Como posso ajudar hoje?"
 
 CFG_PADRAO = {
     "system_prompt": "",
@@ -177,11 +181,13 @@ def pesquisar_na_web(consulta):
     if not TEM_BUSCA:
         return ""
     try:
-        resultados = DDGS().text(consulta, region="br-pt", max_results=4)
+        resultados = list(DDGS().text(consulta, region="br-pt", max_results=5))
+        if not resultados:
+            resultados = list(DDGS().news(consulta, region="br-pt", max_results=4))
         if not resultados:
             return ""
         resumo_web = "\n".join([f"- {r.get('title', '')}: {r.get('body', '')}" for r in resultados])
-        return f"\n\n[PESQUISA NA INTERNET EM TEMPO REAL]:\n{resumo_web}"
+        return f"\n\n[DADOS ATUALIZADOS DA INTERNET AGORA — USE OBRIGATORIAMENTE PARA RESPONDER]:\n{resumo_web}"
     except Exception:
         return ""
 
@@ -258,16 +264,14 @@ def processar_envio_publico(texto_usuario):
     apps_ativos = [k for k, v in cfg["conexoes"].items() if v]
     
     bloco_regras = f"""Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa com {nome_usr}.
-    - REGRA SOBRE CRÉDITOS (IMPORTANTE): Todos os créditos da L.U.C.AI são 100% GRATUITOS! Ninguém paga nada para usar. Visitantes ganham 5 créditos grátis, contas criadas ganham 10 créditos grátis e, se precisarem de mais, basta pedir um código de recarga gratuito para o criador Luca Legal (nos comentários do YouTube ou redes sociais) e resgatar na aba 'Resgatar Créditos ⚡' no menu '⋮'.
-    - GERAÇÃO DE IMAGENS ({'ATIVA' if cfg['img_ativa'] else 'DESATIVADA'}): Se estiver ATIVA e o usuário pedir para criar, gerar, desenhar ou fazer uma imagem/foto/arte, responda com uma frase curta em português e coloque no final a tag com NO MÁXIMO 5 palavras em inglês: [GERAR_IMAGEM: short 5 word english prompt].
-    - IDIOMA: {cfg['idioma']}.
-    - TOM DE VOZ: {cfg['tom_voz']}.
-    - TAMANHO DA RESPOSTA: {cfg['tamanho']}.
+    - REGRA SOBRE CRÉDITOS: Todos os créditos da L.U.C.AI são 100% GRATUITOS! Visitantes ganham 5 créditos grátis, contas criadas ganham 10 créditos grátis e, se precisarem de mais, basta pedir um código de recarga gratuito para o criador Luca Legal (nos comentários do YouTube ou redes sociais) e resgatar na aba 'Resgatar Créditos ⚡' no menu '⋮'.
+    - REGRA OBRIGATÓRIA DE IMAGENS ({'ATIVA' if cfg['img_ativa'] else 'DESATIVADA'}): Você TEM um gerador de imagens integrado! Se o usuário pedir qualquer imagem, foto, desenho ou arte, NUNCA diga que não pode criar imagens e NUNCA faça perguntas. Apenas escreva "Aqui está a sua imagem:" e coloque no final a tag com até 6 palavras em inglês: [GERAR_IMAGEM: prompt in english].
+    - IDIOMA: {cfg['idioma']} | TOM DE VOZ: {cfg['tom_voz']} | TAMANHO: {cfg['tamanho']}.
     - INSTRUÇÕES DO USUÁRIO: {cfg['system_prompt'] or 'Nenhuma regra extra.'}
-    - MEMÓRIA APRENDIDA SOBRE O USUÁRIO: {mems_usr or 'Nenhum fato salvo ainda.'}
-    - BASE DE CONHECIMENTO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum arquivo anexado.'}
+    - MEMÓRIA SOBRE O USUÁRIO: {mems_usr or 'Nenhum fato salvo.'}
+    - ARQUIVO ANEXADO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum.'}
     - INTEGRAÇÕES: {', '.join(apps_ativos) if apps_ativos else 'Nenhuma'} | APROVAÇÃO: {cfg['modo_aprovacao']}.
-    - CONTEXTO DO CRIADOR: {ler_dna_criador()}. MEMÓRIAS GERAIS: {banco_memoria.buscar_todas_notas()}."""
+    - CRIADOR: {ler_dna_criador()}. MEMÓRIAS GERAIS: {banco_memoria.buscar_todas_notas()}."""
 
     dados_web = pesquisar_na_web(texto_usuario) if cfg["web_ativa"] else ""
     resp = gerar_resposta(texto_usuario, conv["mensagens"][:-1], bloco_regras + dados_web, cfg["temperatura"])
