@@ -257,7 +257,7 @@ def processar_envio_publico(texto_usuario):
     
     bloco_regras = f"""Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa com {nome_usr}.
     - REGRA SOBRE CRÉDITOS (IMPORTANTE): Todos os créditos da L.U.C.AI são 100% GRATUITOS! Ninguém paga nada para usar. Visitantes ganham 5 créditos grátis, contas criadas ganham 10 créditos grátis e, se precisarem de mais, basta pedir um código de recarga gratuito para o criador Luca Legal (nos comentários do YouTube ou redes sociais) e resgatar na aba 'Resgatar Créditos ⚡' no menu '⋮'.
-    - GERAÇÃO DE IMAGENS ({'ATIVA' if cfg['img_ativa'] else 'DESATIVADA'}): Se estiver ATIVA e o usuário pedir para criar, gerar, desenhar ou fazer uma imagem/foto/arte/ilustração, responda com uma frase curta e simpática em português e coloque OBRIGATORIAMENTE no final da resposta a tag exata: [GERAR_IMAGEM: detailed visual prompt in English describing the image]. Nunca use links markdown para imagens, use apenas essa tag.
+    - GERAÇÃO DE IMAGENS ({'ATIVA' if cfg['img_ativa'] else 'DESATIVADA'}): Se estiver ATIVA e o usuário pedir para criar, gerar, desenhar ou fazer uma imagem/foto/arte, responda com uma frase curta em português e coloque no final a tag com NO MÁXIMO 5 palavras em inglês: [GERAR_IMAGEM: short 5 word english prompt].
     - IDIOMA: {cfg['idioma']}.
     - TOM DE VOZ: {cfg['tom_voz']}.
     - TAMANHO DA RESPOSTA: {cfg['tamanho']}.
@@ -384,21 +384,22 @@ if st.session_state.modo_tela == "chat":
             texto_msg = msg["content"]
             match_img = re.search(r"\[GERAR_IMAGEM:\s*(.*?)\]", texto_msg, re.DOTALL)
             if match_img:
-                prompt_en = match_img.group(1).strip()
+                prompt_en = match_img.group(1).strip()[:80]
                 texto_limpo = re.sub(r"\[GERAR_IMAGEM:.*?\]", "", texto_msg, flags=re.DOTALL).strip()
                 if texto_limpo:
                     st.markdown(texto_limpo)
-                with st.spinner("Desenhando sua imagem..."):
-                    url_img = f"https://pollinations.ai{urllib.parse.quote(prompt_en)}?width=1024&height=1024&nologo=true&seed={idx + 42}"
-                    try:
-                        resp_img = requests.get(url_img, timeout=25)
-                        if resp_img.status_code == 200 and len(resp_img.content) > 1000:
-                            st.image(resp_img.content, caption=f"Arte gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
-                            st.download_button("Baixar Imagem", data=resp_img.content, file_name=f"lucai_arte_{idx}.jpg", mime="image/jpeg", key=f"dl_img_{idx}")
-                        else:
-                            st.image(url_img, caption=f"Arte gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
-                    except Exception:
-                        st.image(url_img, caption=f"Arte gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
+                url_img = f"https://pollinations.ai{urllib.parse.quote(prompt_en)}?width=768&height=768&nologo=true&model=flux&seed={idx + 10}"
+                try:
+                    resp_img = requests.get(url_img, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
+                    if resp_img.status_code == 200 and "image" in resp_img.headers.get("Content-Type", ""):
+                        st.image(resp_img.content, caption=f"Arte gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
+                        st.download_button("Baixar Imagem", data=resp_img.content, file_name=f"lucai_arte_{idx}.jpg", mime="image/jpeg", key=f"dl_img_{idx}")
+                    else:
+                        st.warning("O servidor gratuito de imagens está sobrecarregado no momento. Abra no link direto:")
+                        st.markdown(f"[Abrir imagem gerada no navegador]({url_img})")
+                except Exception:
+                    st.warning("Tempo limite atingido ao gerar a imagem.")
+                    st.markdown(f"[Tentar abrir imagem no navegador]({url_img})")
             else:
                 st.markdown(texto_msg)
 
