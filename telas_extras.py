@@ -15,7 +15,7 @@ def gerar_imagem_nano_banana(prompt_en):
     chave = st.secrets.get("GEMINI_API_KEY", "")
     if not chave:
         return None, "Configure a chave gratuita `GEMINI_API_KEY` (do Google AI Studio) nos Secrets do Streamlit."
-       base_api = "https://" + "://googleapis.com"
+    base_api = "https://" + "://googleapis.com"
     url = base_api + f"gemini-2.5-flash-image:generateContent?key={chave}"
     payload = {
         "contents": [{"parts": [{"text": f"Generate a high quality image of: {prompt_en}"}]}],
@@ -24,7 +24,7 @@ def gerar_imagem_nano_banana(prompt_en):
     try:
         r = requests.post(url, json=payload, timeout=30)
         if r.status_code == 200:
-            partes = r.json()["candidates"][0]["content"]["parts"]
+            partes = r.json()["candidates"]["content"]["parts"]
             for p in partes:
                 if "inlineData" in p:
                     b64 = p["inlineData"]["data"]
