@@ -22,7 +22,7 @@ except ImportError:
     except ImportError:
         TEM_BUSCA = False
 
-st.set_page_config(page_title="L.U.C.AI (v3.2) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="L.U.C.AI (v3.3) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
 banco_memoria.iniciar_banco()
 
 def iniciar_tabelas_v3():
@@ -45,14 +45,14 @@ CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 SENHA_CRIADOR = "947298688"
-VERSAO_IA = "v3.2"
+VERSAO_IA = "v3.3"
 
 def obter_data_hora_atual():
     agora = datetime.now(timezone(timedelta(hours=-3)))
     dias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.2**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — gerando **imagens reais**, lendo arquivos, pesquisando na web, com créditos **100% gratuitos** e personalização total no menu **⋮**. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.3**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — gerando **imagens reais**, lendo arquivos, pesquisando na web, com créditos **100% gratuitos** e personalização total no menu **⋮**. Como posso ajudar hoje?"
 
 CFG_PADRAO = {
     "system_prompt": "",
@@ -259,13 +259,26 @@ def processar_envio_publico(texto_usuario):
     conv["mensagens"].append({"role": "user", "content": texto_usuario})
     st.session_state.msgs_hoje += 1
 
+    # Interceptação automática de pedidos de imagem (sem deixar a IA recusar)
+    gatilhos_img = ["crie uma imagem", "gere uma imagem", "gerar uma imagem", "criar uma imagem", "desenhe", "faça uma imagem", "faca uma imagem", "crie uma arte", "gere uma arte"]
+    txt_lower = texto_usuario.lower()
+    if cfg["img_ativa"] and any(g in txt_lower for g in gatilhos_img):
+        prompt_en = gerar_resposta(
+            f"Traduza para o inglês em no máximo 6 palavras diretas (sem aspas, sem explicação) apenas o objeto visual deste pedido: {texto_usuario}",
+            [],
+            "Você é um tradutor de prompts visuais. Responda APENAS com 4 a 6 palavras em inglês.",
+            0.3
+        ).strip()
+        alterar_creditos(-2)
+        conv["mensagens"].append({"role": "assistant", "content": f"Aqui está a sua imagem!\n[GERAR_IMAGEM: {prompt_en}]"})
+        return
+
     nome_usr = st.session_state.usuario_logado["nome"] if st.session_state.usuario_logado else "Visitante"
     mems_usr = "\n".join([f"- {f}" for _, f in ler_memorias_usuario()])
     apps_ativos = [k for k, v in cfg["conexoes"].items() if v]
     
     bloco_regras = f"""Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa com {nome_usr}.
     - REGRA SOBRE CRÉDITOS: Todos os créditos da L.U.C.AI são 100% GRATUITOS! Visitantes ganham 5 créditos grátis, contas criadas ganham 10 créditos grátis e, se precisarem de mais, basta pedir um código de recarga gratuito para o criador Luca Legal (nos comentários do YouTube ou redes sociais) e resgatar na aba 'Resgatar Créditos ⚡' no menu '⋮'.
-    - REGRA OBRIGATÓRIA DE IMAGENS ({'ATIVA' if cfg['img_ativa'] else 'DESATIVADA'}): Você TEM um gerador de imagens integrado! Se o usuário pedir qualquer imagem, foto, desenho ou arte, NUNCA diga que não pode criar imagens e NUNCA faça perguntas. Apenas escreva "Aqui está a sua imagem:" e coloque no final a tag com até 6 palavras em inglês: [GERAR_IMAGEM: prompt in english].
     - IDIOMA: {cfg['idioma']} | TOM DE VOZ: {cfg['tom_voz']} | TAMANHO: {cfg['tamanho']}.
     - INSTRUÇÕES DO USUÁRIO: {cfg['system_prompt'] or 'Nenhuma regra extra.'}
     - MEMÓRIA SOBRE O USUÁRIO: {mems_usr or 'Nenhum fato salvo.'}
@@ -275,10 +288,6 @@ def processar_envio_publico(texto_usuario):
 
     dados_web = pesquisar_na_web(texto_usuario) if cfg["web_ativa"] else ""
     resp = gerar_resposta(texto_usuario, conv["mensagens"][:-1], bloco_regras + dados_web, cfg["temperatura"])
-    if "[GERAR_IMAGEM:" in resp:
-        custo = max(custo, 2)
-    alterar_creditos(-custo)
-    conv["mensagens"].append({"role": "assistant", "content": resp})
 
 with st.sidebar:
     st.markdown("### :material/memory: L.U.C.AI")
