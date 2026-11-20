@@ -12,11 +12,12 @@ except ImportError:
     TEM_PDF = False
 
 def gerar_imagem_nano_banana(prompt_en):
-    chave = st.secrets.get("GEMINI_API_KEY", "")
+    chave = st.secrets.get("GEMINI_API_KEY", "").strip()
     if not chave:
         return None, "Configure a chave gratuita `GEMINI_API_KEY` (do Google AI Studio) nos Secrets do Streamlit."
-    base_api = "https://" + "://googleapis.com"
-    url = base_api + f"gemini-2.5-flash-image:generateContent?key={chave}"
+    host = "".join(["generativelanguage", ".", "googleapis", ".", "com"])
+    caminho = "/v1beta/models/gemini-2.5-flash-image:generateContent"
+    url = f"https://{host}{caminho}?key={chave}"
     payload = {
         "contents": [{"parts": [{"text": f"Generate a high quality image of: {prompt_en}"}]}],
         "generationConfig": {"responseModalities": ["IMAGE"]}
