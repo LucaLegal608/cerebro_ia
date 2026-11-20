@@ -3,10 +3,7 @@ import re
 import json
 import time
 import uuid
-import base64
 import sqlite3
-import urllib.parse
-import requests
 from datetime import datetime, timezone, timedelta
 from groq import Groq
 import streamlit as st
@@ -53,7 +50,7 @@ def obter_data_hora_atual():
     dias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.3**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — gerando **imagens reais**, lendo arquivos, pesquisando na web, com créditos **100% gratuitos** e personalização total no menu **⋮**. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.3**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — gerando **imagens com Nano Banana**, pesquisando na web, lendo arquivos, com créditos **100% gratuitos** e personalização total no menu **⋮**. Como posso ajudar hoje?"
 
 CFG_PADRAO = {
     "system_prompt": "",
@@ -264,9 +261,9 @@ def processar_envio_publico(texto_usuario):
     txt_lower = texto_usuario.lower()
     if cfg["img_ativa"] and any(g in txt_lower for g in gatilhos_img):
         prompt_en = gerar_resposta(
-            f"Traduza para o inglês em no máximo 6 palavras diretas (sem aspas, sem explicação) apenas o objeto visual deste pedido: {texto_usuario}",
+            f"Traduza para o inglês em no máximo 8 palavras diretas (sem aspas, sem explicação) apenas o objeto visual deste pedido: {texto_usuario}",
             [],
-            "Você é um tradutor de prompts visuais. Responda APENAS com 4 a 6 palavras em inglês.",
+            "Você é um tradutor de prompts visuais. Responda APENAS com uma frase curta em inglês.",
             0.3
         ).strip()
         alterar_creditos(-2)
@@ -404,28 +401,13 @@ if st.session_state.modo_tela == "chat":
                 prompt_en = match_img.group(1).strip()
                 texto_limpo = re.sub(r"\[GERAR_IMAGEM:.*?\]", "", texto_msg, flags=re.DOTALL).strip()
                 st.markdown(texto_limpo if texto_limpo else "Aqui está a sua imagem:")
-                hf_token = st.secrets.get("HF_TOKEN", "")
-                if not hf_token:
-                    st.warning("Configure a chave gratuita `HF_TOKEN` nos Secrets do Streamlit.")
-                else:
-                    with st.spinner("Criando imagem em alta definição..."):
-                        try:
-                            api_hf = "https://huggingface.co"
-                            resp_hf = requests.post(
-                                api_hf,
-                                headers={"Authorization": f"Bearer {hf_token}", "Content-Type": "application/json"},
-                                json={"model": "black-forest-labs/FLUX.1-schnell", "prompt": prompt_en, "response_format": "b64_json"},
-                                timeout=30
-                            )
-                            if resp_hf.status_code == 200:
-                                img_b64 = resp_hf.json()["data"][0]["b64_json"]
-                                img_bytes = base64.b64decode(img_b64)
-                                st.image(img_bytes, caption=f"Arte gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
-                                st.download_button("Baixar Imagem", data=img_bytes, file_name=f"lucai_arte_{idx}.png", mime="image/png", key=f"dl_img_{idx}")
-                            else:
-                                st.error(f"Status {resp_hf.status_code}: {resp_hf.text[:200]}")
-                        except Exception as e:
-                            st.error(f"Erro na conexão de imagem: {e}")
+                with st.spinner("Criando imagem com Nano Banana..."):
+                    img_bytes, erro_img = telas_extras.gerar_imagem_nano_banana(prompt_en)
+                    if img_bytes:
+                        st.image(img_bytes, caption=f"Arte gerada pela L.U.C.AI: {prompt_en}", use_container_width=True)
+                        st.download_button("Baixar Imagem", data=img_bytes, file_name=f"lucai_arte_{idx}.png", mime="image/png", key=f"dl_img_{idx}")
+                    else:
+                        st.error(erro_img)
             else:
                 st.markdown(texto_msg if texto_msg else "_(Resposta vazia recebida. Tente perguntar novamente.)_")
 
