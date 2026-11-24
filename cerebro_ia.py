@@ -41,10 +41,10 @@ VERSAO_IA = "v3.5"
 
 def obter_data_hora_atual():
     agora = datetime.now(timezone(timedelta(hours=-3)))
-    dias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
+    dias = ("Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo")
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.5**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — pesquisando na web em tempo real, lendo arquivos, sem precisar criar conta e com **15 créditos gratuitos ⚡** já liberados. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.5**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — pesquisando na web em tempo real, lendo arquivos e com **15 créditos gratuitos ⚡** já liberados. Como posso ajudar hoje?"
 
 CFG_PADRAO = {
     "system_prompt": "",
@@ -171,17 +171,17 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
         mensagens_formatadas.append({"role": item["role"], "content": item["content"]})
     mensagens_formatadas.append({"role": "user", "content": mensagem})
 
-    preferidos = [
+    preferidos = (
         "llama-3.3-70b-versatile",
         "meta-llama/llama-4-maverick-17b-128e-instruct",
         "meta-llama/llama-4-scout-17b-16e-instruct",
         "llama-3.1-70b-versatile",
         "llama3-70b-8192"
-    ]
+    )
     disponiveis = []
     try:
         for m in client.models.list().data:
-            if not any(x in m.id.lower() for x in ["whisper", "guard", "tts", "vision", "compound", "8b"]):
+            if not any(x in m.id.lower() for x in ("whisper", "guard", "tts", "vision", "compound", "8b")):
                 disponiveis.append(m.id)
     except Exception as e:
         return f"Erro na chave da API: {e}"
@@ -205,12 +205,12 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
 
 def precisa_pesquisar(texto):
     t = texto.lower()
-    gatilhos = [
+    gatilhos = (
         "pesquise", "busque", "procure", "notícia", "noticia", "hoje", "ontem",
         "amanhã", "atual", "preço", "valor", "cotação", "dólar", "clima",
         "tempo", "previsão", "resultado", "placar", "jogo", "quem ganhou",
         "lançamento", "2025", "2026", "onde fica", "site oficial", "link"
-    ]
+    )
     return any(g in t for g in gatilhos)
 
 def processar_envio_publico(texto_usuario):
@@ -276,7 +276,7 @@ with st.sidebar:
     st.markdown("##### Recentes")
     for id_conv in reversed(list(st.session_state.conversas.keys())):
         dados = st.session_state.conversas[id_conv]
-        c_tit, c_del = st.columns([0.80, 0.20])
+        c_tit, c_del = st.columns((0.80, 0.20))
         icone_chat = ":material/chat:" if id_conv == st.session_state.conversa_atual else ":material/chat_bubble_outline:"
         if c_tit.button(dados["titulo"], icon=icone_chat, key=f"btn_{id_conv}", use_container_width=True, help="Abrir esta conversa"):
             st.session_state.conversa_atual = id_conv
@@ -421,7 +421,7 @@ elif st.session_state.modo_tela == "memoria":
     st.subheader("Banco de Dados (Acesso Restrito)")
     senha_mem = st.text_input("Código de acesso:", type="password", key="pwd_mem")
     if senha_mem == SENHA_CRIADOR:
-        cat = st.selectbox("Categoria", ["Novidade", "Produto/Link", "Informação Geral", "Regra de Resposta"])
+        cat = st.selectbox("Categoria", ("Novidade", "Produto/Link", "Informação Geral", "Regra de Resposta"))
         nota = st.text_area("O que a L.U.C.AI deve memorizar?")
         if st.button("Salvar Manualmente", icon=":material/save:"):
             if nota.strip():
