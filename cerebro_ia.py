@@ -20,20 +20,14 @@ except ImportError:
     except ImportError:
         TEM_BUSCA = False
 
-st.set_page_config(page_title="L.U.C.AI (v3.4) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="L.U.C.AI (v3.5) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
 banco_memoria.iniciar_banco()
 
 def iniciar_tabelas_v3():
     conn = sqlite3.connect("memoria.db")
     c = conn.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS usuarios (usuario TEXT PRIMARY KEY, senha TEXT, nome TEXT, creditos INTEGER DEFAULT 10)")
     c.execute("CREATE TABLE IF NOT EXISTS feedbacks (id INTEGER PRIMARY KEY AUTOINCREMENT, autor TEXT, mensagem TEXT, data TEXT)")
-    c.execute("CREATE TABLE IF NOT EXISTS memorias_usr (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario TEXT, fato TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS codigos_pagos (codigo TEXT PRIMARY KEY, valor INTEGER, usado INTEGER DEFAULT 0)")
-    try:
-        c.execute("ALTER TABLE usuarios ADD COLUMN creditos INTEGER DEFAULT 10")
-    except Exception:
-        pass
     conn.commit()
     conn.close()
 
@@ -43,14 +37,14 @@ CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 SENHA_CRIADOR = "947298688"
-VERSAO_IA = "v3.4"
+VERSAO_IA = "v3.5"
 
 def obter_data_hora_atual():
     agora = datetime.now(timezone(timedelta(hours=-3)))
     dias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.4**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — pesquisando na web em tempo real, lendo arquivos, com memória personalizada e créditos **100% gratuitos** no menu **⋮**. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.5**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — pesquisando na web em tempo real, lendo arquivos, sem precisar criar conta e com **15 créditos gratuitos ⚡** já liberados. Como posso ajudar hoje?"
 
 CFG_PADRAO = {
     "system_prompt": "",
@@ -76,19 +70,11 @@ if "cfg" not in st.session_state:
 if "msgs_hoje" not in st.session_state:
     st.session_state.msgs_hoje = 0
 
-if "creditos_visitante" not in st.session_state:
-    st.session_state.creditos_visitante = 5
+if "creditos_sessao" not in st.session_state:
+    st.session_state.creditos_sessao = 15
 
-if "usuario_logado" not in st.session_state:
-    st.session_state.usuario_logado = None
-    if "sessao" in st.query_params:
-        usr_salvo = st.query_params["sessao"]
-        conn = sqlite3.connect("memoria.db")
-        dados_usr = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=?", (usr_salvo,)).fetchone()
-        conn.close()
-        if dados_usr:
-            u_val, n_val = dados_usr
-            st.session_state.usuario_logado = {"usuario": u_val, "nome": n_val}
+if "memorias_sessao" not in st.session_state:
+    st.session_state.memorias_sessao = []
 
 if "conversas" not in st.session_state:
     id_ini = str(uuid.uuid4())
@@ -102,26 +88,10 @@ if "menu_aberto" not in st.session_state:
     st.session_state.menu_aberto = False
 
 def obter_creditos():
-    if st.session_state.usuario_logado:
-        conn = sqlite3.connect("memoria.db")
-        row = conn.execute("SELECT creditos FROM usuarios WHERE usuario=?", (st.session_state.usuario_logado["usuario"],)).fetchone()
-        conn.close()
-        if row:
-            (qtd,) = row
-            return int(qtd) if qtd is not None else 10
-        return 10
-    return int(st.session_state.creditos_visitante)
+    return int(st.session_state.creditos_sessao)
 
 def alterar_creditos(delta):
-    if st.session_state.usuario_logado:
-        atual = obter_creditos()
-        novo = max(0, atual + delta)
-        conn = sqlite3.connect("memoria.db")
-        conn.execute("UPDATE usuarios SET creditos=? WHERE usuario=?", (novo, st.session_state.usuario_logado["usuario"]))
-        conn.commit()
-        conn.close()
-    else:
-        st.session_state.creditos_visitante = max(0, int(st.session_state.creditos_visitante) + delta)
+    st.session_state.creditos_sessao = max(0, int(st.session_state.creditos_sessao) + delta)
 
 def criar_nova_conversa():
     nid = str(uuid.uuid4())
@@ -183,11 +153,7 @@ def pesquisar_na_web(consulta):
         return ""
 
 def ler_memorias_usuario():
-    usr = st.session_state.usuario_logado["usuario"] if st.session_state.usuario_logado else "visitante"
-    conn = sqlite3.connect("memoria.db")
-    itens = conn.execute("SELECT id, fato FROM memorias_usr WHERE usuario=?", (usr,)).fetchall()
-    conn.close()
-    return itens
+    return st.session_state.memorias_sessao
 
 def ler_dna_criador():
     try:
@@ -200,7 +166,7 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
     regra_idioma = "\n\n[INSTRUÇÃO DE QUALIDADE]: Responda SEMPRE em português do Brasil natural, fluido, inteligente e bem escrito. NUNCA coloque frases entre colchetes [...] no final da resposta e NUNCA invente que pesquisou no Google ou Mercado Livre se não houver dados de pesquisa acima."
     sistema_completo = f"{instrucao_sistema}{regra_idioma}\n\n[DATA E HORA ATUAL EM BRASÍLIA: {obter_data_hora_atual()}.]"
     mensagens_formatadas = [{"role": "system", "content": sistema_completo}]
-    janela = st.session_state.cfg["janela_contexto"] if st.session_state.usuario_logado else 4
+    janela = st.session_state.cfg["janela_contexto"]
     for item in historico[-janela:]:
         mensagens_formatadas.append({"role": item["role"], "content": item["content"]})
     mensagens_formatadas.append({"role": "user", "content": mensagem})
@@ -273,16 +239,15 @@ def processar_envio_publico(texto_usuario):
     conv["mensagens"].append({"role": "user", "content": texto_usuario})
     st.session_state.msgs_hoje += 1
 
-    nome_usr = st.session_state.usuario_logado["nome"] if st.session_state.usuario_logado else "Visitante"
-    mems_usr = "\n".join([f"- {f}" for _, f in ler_memorias_usuario()])
+    mems_usr = "\n".join([f"- {f}" for f in ler_memorias_usuario()])
     apps_ativos = [k for k, v in cfg["conexoes"].items() if v]
 
     bloco_regras = (
-        f"Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa com {nome_usr} em português natural e fluente.\n"
-        "- REGRA SOBRE CRÉDITOS: Todos os créditos da L.U.C.AI são 100% GRATUITOS! Visitantes ganham 5 créditos grátis, contas criadas ganham 10 créditos grátis e, se precisarem de mais, basta pedir um código de recarga gratuito para o criador Luca Legal e resgatar na aba 'Resgatar Créditos ⚡' no menu '⋮'.\n"
+        f"Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa em português natural e fluente.\n"
+        "- REGRA SOBRE CRÉDITOS: Todos os créditos da L.U.C.AI são 100% GRATUITOS! Todo usuário já começa com 15 créditos grátis sem precisar criar conta e, se precisar de mais, basta pedir um código de recarga gratuito para o criador Luca Legal e resgatar na aba 'Resgatar Créditos ⚡' no menu '⋮'.\n"
         f"- IDIOMA: {cfg['idioma']} | TOM DE VOZ: {cfg['tom_voz']} | TAMANHO: {cfg['tamanho']}.\n"
         f"- INSTRUÇÕES DO USUÁRIO: {cfg['system_prompt'] or 'Nenhuma regra extra.'}\n"
-        f"- MEMÓRIA SOBRE O USUÁRIO: {mems_usr or 'Nenhum fato salvo.'}\n"
+        f"- MEMÓRIA DA SESSÃO: {mems_usr or 'Nenhum fato salvo.'}\n"
         f"- ARQUIVO ANEXADO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum.'}\n"
         f"- INTEGRAÇÕES: {', '.join(apps_ativos) if apps_ativos else 'Nenhuma'} | APROVAÇÃO: {cfg['modo_aprovacao']}.\n"
         f"- CRIADOR: {ler_dna_criador()}. MEMÓRIAS GERAIS: {banco_memoria.buscar_todas_notas()}."
@@ -301,30 +266,24 @@ with st.sidebar:
     saldo_atual = obter_creditos()
     st.metric(label="Seus Créditos Grátis", value=f"{saldo_atual} ⚡", help="Os créditos são 100% gratuitos! Peça um código ao criador se precisar de mais.")
 
-    if st.session_state.usuario_logado:
+    if st.button("Nova conversa", icon=":material/add_comment:", use_container_width=True, type="primary", help="Inicia um novo bate-papo do zero"):
+        criar_nova_conversa()
+        st.rerun()
 
-        st.success(f"Conectado: **{st.session_state.usuario_logado['nome']}**")
-        if st.button("Nova conversa", icon=":material/add_comment:", use_container_width=True, type="primary", help="Inicia um novo bate-papo do zero"):
-            criar_nova_conversa()
+    if st.session_state.cfg["modo_anonimo"]:
+        st.warning("Modo Anônimo Ativo")
+
+    st.markdown("##### Recentes")
+    for id_conv in reversed(list(st.session_state.conversas.keys())):
+        dados = st.session_state.conversas[id_conv]
+        c_tit, c_del = st.columns([0.80, 0.20])
+        icone_chat = ":material/chat:" if id_conv == st.session_state.conversa_atual else ":material/chat_bubble_outline:"
+        if c_tit.button(dados["titulo"], icon=icone_chat, key=f"btn_{id_conv}", use_container_width=True, help="Abrir esta conversa"):
+            st.session_state.conversa_atual = id_conv
+            st.session_state.modo_tela = "chat"
             st.rerun()
-        if st.session_state.cfg["modo_anonimo"]:
-            st.warning("Modo Anônimo Ativo")
-            st.markdown("##### Recentes")
-        for id_conv in reversed(list(st.session_state.conversas.keys())):
-            dados = st.session_state.conversas[id_conv]
-            c_tit, c_del = st.columns([0.80, 0.20])
-            icone_chat = ":material/chat:" if id_conv == st.session_state.conversa_atual else ":material/chat_bubble_outline:"
-            if c_tit.button(dados["titulo"], icon=icone_chat, key=f"btn_{id_conv}", use_container_width=True, help="Abrir esta conversa"):
-                st.session_state.conversa_atual = id_conv
-                st.session_state.modo_tela = "chat"
-                st.rerun()
-            if c_del.button("", icon=":material/delete:", key=f"del_{id_conv}", help="Apagar esta conversa"):
-                excluir_conversa(id_conv)
-                st.rerun()
-    else:
-        st.info("Modo Visitante (5 créditos grátis)")
-        if st.button("Entrar / Criar Conta (+10 ⚡ Grátis)", icon=":material/login:", use_container_width=True, help="Crie sua conta gratuita para ganhar 10 créditos grátis na hora"):
-            st.session_state.modo_tela = "contas"
+        if c_del.button("", icon=":material/delete:", key=f"del_{id_conv}", help="Apagar esta conversa"):
+            excluir_conversa(id_conv)
             st.rerun()
 
     st.divider()
@@ -342,10 +301,6 @@ with st.sidebar:
             st.rerun()
         if st.button("Configurações Completas", icon=":material/settings:", use_container_width=True, help="Personalidade, Memória, Plugins, Atalhos e Segurança"):
             st.session_state.modo_tela = "configuracoes"
-            st.session_state.menu_aberto = False
-            st.rerun()
-        if st.button("Contas (Login)", icon=":material/account_circle:", use_container_width=True, help="Entrar, cadastrar ou sair da conta"):
-            st.session_state.modo_tela = "contas"
             st.session_state.menu_aberto = False
             st.rerun()
         if st.button("Compartilhar L.U.C.AI", icon=":material/share:", use_container_width=True, help="Copiar o link oficial da L.U.C.AI"):
@@ -415,53 +370,6 @@ elif st.session_state.modo_tela == "configuracoes":
 elif st.session_state.modo_tela == "compartilhar":
     st.subheader("Compartilhar L.U.C.AI")
     st.code("https://streamlit.app", language="text")
-
-elif st.session_state.modo_tela == "contas":
-    st.subheader("Contas L.U.C.AI")
-    if st.session_state.usuario_logado:
-        st.success(f"Conectado como **{st.session_state.usuario_logado['nome']}** (`@{st.session_state.usuario_logado['usuario']}`).")
-        if st.button("Sair da Conta (Logout)", icon=":material/logout:"):
-            st.session_state.usuario_logado = None
-            st.query_params.clear()
-            st.session_state.modo_tela = "chat"
-            st.rerun()
-    else:
-        aba_entrar, aba_criar = st.tabs(["Entrar na Conta", "Criar Conta Gratuita (+10 Créditos)"])
-        with aba_entrar:
-            with st.form("form_login"):
-                u_login = st.text_input("Nome de usuário:")
-                s_login = st.text_input("Senha:", type="password")
-                if st.form_submit_button("Entrar"):
-                    conn = sqlite3.connect("memoria.db")
-                    res = conn.execute("SELECT usuario, nome FROM usuarios WHERE usuario=? AND senha=?", (u_login.strip(), s_login.strip())).fetchone()
-                    conn.close()
-                    if res:
-                        u_val, n_val = res
-                        st.session_state.usuario_logado = {"usuario": u_val, "nome": n_val}
-                        st.query_params["sessao"] = u_val
-                        st.session_state.modo_tela = "chat"
-                        st.rerun()
-                    else:
-                        st.error("Usuário ou senha incorretos.")
-        with aba_criar:
-            with st.form("form_cadastro"):
-                n_cad = st.text_input("Seu nome:")
-                u_cad = st.text_input("Escolha um usuário (sem espaços):")
-                s_cad = st.text_input("Crie uma senha:", type="password")
-                if st.form_submit_button("Criar Conta Grátis (+10 Créditos)"):
-                    if n_cad.strip() and u_cad.strip() and s_cad.strip():
-                        conn = sqlite3.connect("memoria.db")
-                        if conn.execute("SELECT usuario FROM usuarios WHERE usuario=?", (u_cad.strip(),)).fetchone():
-                            conn.close()
-                            st.error("Esse nome de usuário já existe.")
-                        else:
-                            conn.execute("INSERT INTO usuarios (usuario, senha, nome, creditos) VALUES (?, ?, ?, 10)", (u_cad.strip(), s_cad.strip(), n_cad.strip()))
-                            conn.commit()
-                            conn.close()
-                            st.session_state.usuario_logado = {"usuario": u_cad.strip(), "nome": n_cad.strip()}
-                            st.query_params["sessao"] = u_cad.strip()
-                            st.session_state.modo_tela = "chat"
-                            st.rerun()
 
 elif st.session_state.modo_tela == "feedback":
     st.subheader("Enviar Feedback")
