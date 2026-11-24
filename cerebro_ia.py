@@ -300,7 +300,7 @@ def processar_envio_publico(texto_usuario):
             st.rerun()
         if st.session_state.cfg["modo_anonimo"]:
             st.warning("Modo Anônimo Ativo")
-        st.markdown("##### Recentes")
+            st.markdown("##### Recentes")
         for id_conv in reversed(list(st.session_state.conversas.keys())):
             dados = st.session_state.conversas[id_conv]
             c_tit, c_del = st.columns([0.80, 0.20])
