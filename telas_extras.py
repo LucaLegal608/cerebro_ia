@@ -14,7 +14,7 @@ def exibir_tela_creditos(obter_creditos, alterar_creditos, senha_criador):
     st.metric("Seu Saldo Atual", f"{obter_creditos()} créditos grátis ⚡", help="Todos os créditos da L.U.C.AI são totalmente gratuitos!")
     st.caption("Consumo por uso: Mensagem = **1 ⚡** | Pesquisa Web / Arquivo = **2 ⚡**")
 
-    st.info("🎁 **Os créditos são 100% de graça!** Peça um **Código de Recarga Gratuito** diretamente para o criador **Luca Legal** (nos comentários do YouTube, redes sociais ou mensagem) e ative abaixo sem pagar nada!")
+    st.info("🎁 **Os créditos são 100% de graça!** Peça um **Código de Recarga Gratuito** diretamente para o criador **Luca Legal** e ative abaixo sem pagar nada!")
 
     with st.form("form_resgate_gratis"):
         cod_input = st.text_input("Digite o Código Gratuito que você recebeu do criador:")
@@ -44,7 +44,8 @@ def exibir_tela_creditos(obter_creditos, alterar_creditos, senha_criador):
         s_cred = st.text_input("Código de acesso do criador:", type="password", key="pwd_cred")
         if s_cred == senha_criador:
             col_g1, col_g2 = st.columns(2)
-            pacote_gerar = col_g1.selectbox("Quantidade de créditos grátis:",)
+            opcoes_pacotes = (50, 100, 300, 500, 1000)
+            pacote_gerar = col_g1.selectbox("Quantidade de créditos grátis:", opcoes_pacotes)
             if col_g2.button("Gerar Código Grátis Agora", icon=":material/key:"):
                 novo_cod = f"LUCA-{pacote_gerar}-{str(uuid.uuid4())[:6].upper()}"
                 conn = sqlite3.connect("memoria.db")
@@ -57,14 +58,15 @@ def exibir_tela_creditos(obter_creditos, alterar_creditos, senha_criador):
 def exibir_tela_configuracoes(ler_memorias_usuario, criar_nova_conversa):
     st.subheader("Central de Configurações — L.U.C.AI v3.5")
     cfg = st.session_state.cfg
-    aba1, aba2, aba3, aba4, aba5 = st.tabs(["1. Personalidade", "2. Memória & Arquivos", "3. Ferramentas & Apps", "4. Atalhos Rápidos", "5. Privacidade & Segurança"])
+    tabs_nomes = ("1. Personalidade", "2. Memória & Arquivos", "3. Ferramentas & Apps", "4. Atalhos Rápidos", "5. Privacidade & Segurança")
+    aba1, aba2, aba3, aba4, aba5 = st.tabs(tabs_nomes)
 
     with aba1:
         cfg["system_prompt"] = st.text_area("Instruções personalizadas (System Prompt):", value=cfg["system_prompt"], placeholder="Ex: Sempre responda em tópicos...")
         c_tom, c_tam, c_idi = st.columns(3)
-        lista_tons = ["Casual e Amigável", "Formal e Profissional", "Direto ao Ponto", "Criativo", "Didático"]
-        lista_tams = ["Curto e direto", "Equilibrado", "Detalhado"]
-        lista_idis = ["Português (Brasil)", "Detecção Automática", "Inglês", "Espanhol"]
+        lista_tons = ("Casual e Amigável", "Formal e Profissional", "Direto ao Ponto", "Criativo", "Didático")
+        lista_tams = ("Curto e direto", "Equilibrado", "Detalhado")
+        lista_idis = ("Português (Brasil)", "Detecção Automática", "Inglês", "Espanhol")
         with c_tom:
             cfg["tom_voz"] = st.selectbox("Tom de voz:", lista_tons, index=lista_tons.index(cfg["tom_voz"]))
         with c_tam:
@@ -81,13 +83,14 @@ def exibir_tela_configuracoes(ler_memorias_usuario, criar_nova_conversa):
                 st.session_state.memorias_sessao.append(novo_fato.strip())
                 st.rerun()
         for idx_f, ftxt in enumerate(ler_memorias_usuario()):
-            cm1, cm2 = st.columns([0.85, 0.15])
+            cm1, cm2 = st.columns((0.85, 0.15))
             cm1.info(ftxt)
             if cm2.button("", icon=":material/delete:", key=f"del_mem_{idx_f}"):
                 st.session_state.memorias_sessao.pop(idx_f)
                 st.rerun()
 
-        arq_up = st.file_uploader("Enviar documento (PDF / TXT / CSV / Código):", type=["pdf", "txt", "csv", "py", "md"])
+        tipos_arq = ("pdf", "txt", "csv", "py", "md")
+        arq_up = st.file_uploader("Enviar documento (PDF / TXT / CSV / Código):", type=tipos_arq)
         if arq_up is not None:
             if arq_up.name.lower().endswith(".pdf") and TEM_PDF:
                 leitor = PdfReader(arq_up)
@@ -107,13 +110,14 @@ def exibir_tela_configuracoes(ler_memorias_usuario, criar_nova_conversa):
         cfg["conexoes"]["Notion"] = ca1.toggle("Notion", value=cfg["conexoes"]["Notion"])
         cfg["conexoes"]["WhatsApp"] = ca2.toggle("WhatsApp", value=cfg["conexoes"]["WhatsApp"])
         cfg["conexoes"]["CRM"] = ca2.toggle("CRM", value=cfg["conexoes"]["CRM"])
-        cfg["modo_aprovacao"] = st.radio("Modo de aprovação:", ["Pedir confirmação antes de agir", "Executar ações automaticamente"], index=0 if cfg["modo_aprovacao"] == "Pedir confirmação antes de agir" else 1)
+        opcoes_aprov = ("Pedir confirmação antes de agir", "Executar ações automaticamente")
+        cfg["modo_aprovacao"] = st.radio("Modo de aprovação:", opcoes_aprov, index=0 if cfg["modo_aprovacao"] == "Pedir confirmação antes de agir" else 1)
 
     with aba4:
         st.markdown("#### Atalhos e Comandos Rápidos")
         for cmd, desc in list(cfg["atalhos"].items()):
             st.code(f"{cmd} -> {desc}")
-        nc1, nc2 = st.columns([0.3, 0.7])
+        nc1, nc2 = st.columns((0.3, 0.7))
         novo_cmd = nc1.text_input("Novo comando (ex: /traduzir):")
         nova_acao = nc2.text_input("O que ele faz:")
         if st.button("Adicionar Atalho", icon=":material/bolt:"):
