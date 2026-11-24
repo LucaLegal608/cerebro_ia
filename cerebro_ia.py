@@ -285,7 +285,17 @@ def processar_envio_publico(texto_usuario):
         f"- MEMÓRIA SOBRE O USUÁRIO: {mems_usr or 'Nenhum fato salvo.'}\n"
         f"- ARQUIVO ANEXADO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum.'}\n"
     )
-    with st.sidebar:
+          f"- ARQUIVO ANEXADO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum.'}\n"
+        f"- INTEGRAÇÕES: {', '.join(apps_ativos) if apps_ativos else 'Nenhuma'} | APROVAÇÃO: {cfg['modo_aprovacao']}.\n"
+        f"- CRIADOR: {ler_dna_criador()}. MEMÓRIAS GERAIS: {banco_memoria.buscar_todas_notas()}."
+    )
+
+    dados_web = pesquisar_na_web(texto_usuario) if vai_buscar_web else ""
+    resp = gerar_resposta(texto_usuario, conv["mensagens"][:-1], bloco_regras + dados_web, cfg["temperatura"])
+    alterar_creditos(-custo)
+    conv["mensagens"].append({"role": "assistant", "content": resp})
+
+with st.sidebar:
     st.markdown("### :material/memory: L.U.C.AI")
     st.caption("Lógica Unificada de Conhecimento e Ação Inteligente")
     st.caption(f":material/schedule: {obter_data_hora_atual()}")
@@ -294,6 +304,7 @@ def processar_envio_publico(texto_usuario):
     st.metric(label="Seus Créditos Grátis", value=f"{saldo_atual} ⚡", help="Os créditos são 100% gratuitos! Peça um código ao criador se precisar de mais.")
 
     if st.session_state.usuario_logado:
+
         st.success(f"Conectado: **{st.session_state.usuario_logado['nome']}**")
         if st.button("Nova conversa", icon=":material/add_comment:", use_container_width=True, type="primary", help="Inicia um novo bate-papo do zero"):
             criar_nova_conversa()
