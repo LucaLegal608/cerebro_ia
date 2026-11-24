@@ -1,8 +1,6 @@
 import json
 import uuid
 import sqlite3
-import base64
-import requests
 import streamlit as st
 
 try:
@@ -11,42 +9,10 @@ try:
 except ImportError:
     TEM_PDF = False
 
-def gerar_imagem_nano_banana(prompt_en):
-    import urllib.parse
-    import time
-    prompt_limpo = urllib.parse.quote(prompt_en[:120])
-    host_poll = "".join(["image", ".", "pollinations", ".", "ai"])
-    url_direta = f"https://{host_poll}/prompt/{prompt_limpo}?width=768&height=768&nologo=true"
-    
-    # Tenta gerar via AI Horde (100% gratuito, sem chave e sem cartão)
-    try:
-        host_horde = "".join(["stablehorde", ".", "net"])
-        resp_post = requests.post(
-            f"https://{host_horde}/api/v2/generate/async",
-            headers={"apikey": "0000000000", "Content-Type": "application/json"},
-            json={"prompt": prompt_en, "params": {"width": 512, "height": 512, "steps": 20}},
-            timeout=15
-        )
-        if resp_post.status_code == 202:
-            job_id = resp_post.json().get("id")
-            for _ in range(12):
-                time.sleep(2.5)
-                check = requests.get(f"https://{host_horde}/api/v2/generate/status/{job_id}", timeout=10).json()
-                if check.get("done") and check.get("generations"):
-                    img_url = check["generations"]["img"]
-                    img_bytes = requests.get(img_url, timeout=15).content
-                    return img_bytes, None
-    except Exception:
-        pass
-
-    # Reserva instantânea direto no navegador do usuário (sem bloqueio de servidor)
-    return url_direta, None
-
-
 def exibir_tela_creditos(obter_creditos, alterar_creditos, senha_criador):
     st.subheader("Central de Créditos 100% Gratuitos — L.U.C.AI ⚡")
     st.metric("Seu Saldo Atual", f"{obter_creditos()} créditos grátis ⚡", help="Todos os créditos da L.U.C.AI são totalmente gratuitos!")
-    st.caption("Consumo por uso: Mensagem = **1 ⚡** | Pesquisa Web / Imagem / Arquivo = **2 ⚡**")
+    st.caption("Consumo por uso: Mensagem = **1 ⚡** | Pesquisa Web / Arquivo = **2 ⚡**")
 
     st.info("🎁 **Os créditos são 100% de graça!** Peça um **Código de Recarga Gratuito** diretamente para o criador **Luca Legal** (nos comentários do YouTube, redes sociais ou mensagem) e ative abaixo sem pagar nada!")
 
@@ -60,23 +26,25 @@ def exibir_tela_creditos(obter_creditos, alterar_creditos, senha_criador):
                 if not row:
                     conn.close()
                     st.error("Código inválido. Peça um código gratuito válido ao criador Luca Legal.")
-                elif row[1] == 1:
-                    conn.close()
-                    st.error("Este código já foi usado anteriormente. Peça um novo código ao criador!")
                 else:
-                    conn.execute("UPDATE codigos_pagos SET usado=1 WHERE codigo=?", (cod,))
-                    conn.commit()
-                    conn.close()
-                    alterar_creditos(row[0])
-                    st.success(f"Parabéns! +{row[0]} créditos gratuitos ⚡ adicionados à sua conta!")
-                    st.rerun()
+                    valor_cod, foi_usado = row
+                    if foi_usado == 1:
+                        conn.close()
+                        st.error("Este código já foi usado anteriormente. Peça um novo código ao criador!")
+                    else:
+                        conn.execute("UPDATE codigos_pagos SET usado=1 WHERE codigo=?", (cod,))
+                        conn.commit()
+                        conn.close()
+                        alterar_creditos(valor_cod)
+                        st.success(f"Parabéns! +{valor_cod} créditos gratuitos ⚡ adicionados!")
+                        st.rerun()
 
     st.divider()
     with st.expander("Painel do Criador — Gerar Códigos Gratuitos (Acesso Restrito)"):
         s_cred = st.text_input("Código de acesso do criador:", type="password", key="pwd_cred")
         if s_cred == senha_criador:
             col_g1, col_g2 = st.columns(2)
-            pacote_gerar = col_g1.selectbox("Quantidade de créditos grátis:", [50, 100, 300, 500, 1000])
+            pacote_gerar = col_g1.selectbox("Quantidade de créditos grátis:",)
             if col_g2.button("Gerar Código Grátis Agora", icon=":material/key:"):
                 novo_cod = f"LUCA-{pacote_gerar}-{str(uuid.uuid4())[:6].upper()}"
                 conn = sqlite3.connect("memoria.db")
@@ -86,18 +54,8 @@ def exibir_tela_creditos(obter_creditos, alterar_creditos, senha_criador):
                 st.success("Código gratuito gerado! Copie e envie para o usuário (uso único):")
                 st.code(novo_cod, language="text")
 
-            st.divider()
-            u_alvo = st.text_input("Nome de usuário (sem @):")
-            qtd_add = st.number_input("Quantidade de créditos grátis:", min_value=10, max_value=50000, value=100)
-            if st.button("Creditar Grátis Diretamente", icon=":material/send:"):
-                conn = sqlite3.connect("memoria.db")
-                conn.execute("UPDATE usuarios SET creditos = COALESCE(creditos, 10) + ? WHERE usuario=?", (qtd_add, u_alvo.strip()))
-                conn.commit()
-                conn.close()
-                st.success(f"+{qtd_add} créditos gratuitos enviados para @{u_alvo.strip()}!")
-
 def exibir_tela_configuracoes(ler_memorias_usuario, criar_nova_conversa):
-    st.subheader("Central de Configurações — L.U.C.AI v3.3")
+    st.subheader("Central de Configurações — L.U.C.AI v3.5")
     cfg = st.session_state.cfg
     aba1, aba2, aba3, aba4, aba5 = st.tabs(["1. Personalidade", "2. Memória & Arquivos", "3. Ferramentas & Apps", "4. Atalhos Rápidos", "5. Privacidade & Segurança"])
 
@@ -117,23 +75,16 @@ def exibir_tela_configuracoes(ler_memorias_usuario, criar_nova_conversa):
 
     with aba2:
         cfg["janela_contexto"] = st.slider("Janela de contexto (mensagens lembradas):", 2, 30, int(cfg["janela_contexto"]))
-        usr_at = st.session_state.usuario_logado["usuario"] if st.session_state.usuario_logado else "visitante"
-        novo_fato = st.text_input("Adicionar fato na memória:")
+        novo_fato = st.text_input("Adicionar fato na memória desta sessão:")
         if st.button("Salvar na Memória", icon=":material/add:"):
             if novo_fato.strip():
-                conn = sqlite3.connect("memoria.db")
-                conn.execute("INSERT INTO memorias_usr (usuario, fato) VALUES (?, ?)", (usr_at, novo_fato.strip()))
-                conn.commit()
-                conn.close()
+                st.session_state.memorias_sessao.append(novo_fato.strip())
                 st.rerun()
-        for fid, ftxt in ler_memorias_usuario():
+        for idx_f, ftxt in enumerate(ler_memorias_usuario()):
             cm1, cm2 = st.columns([0.85, 0.15])
             cm1.info(ftxt)
-            if cm2.button("", icon=":material/delete:", key=f"del_mem_{fid}"):
-                conn = sqlite3.connect("memoria.db")
-                conn.execute("DELETE FROM memorias_usr WHERE id=?", (fid,))
-                conn.commit()
-                conn.close()
+            if cm2.button("", icon=":material/delete:", key=f"del_mem_{idx_f}"):
+                st.session_state.memorias_sessao.pop(idx_f)
                 st.rerun()
 
         arq_up = st.file_uploader("Enviar documento (PDF / TXT / CSV / Código):", type=["pdf", "txt", "csv", "py", "md"])
@@ -147,11 +98,10 @@ def exibir_tela_configuracoes(ler_memorias_usuario, criar_nova_conversa):
             st.success(f"Arquivo '{arq_up.name}' carregado!")
 
     with aba3:
-        t1, t2, t3, t4 = st.columns(4)
+        t1, t2, t3 = st.columns(3)
         cfg["web_ativa"] = t1.toggle("Pesquisa na Web", value=cfg["web_ativa"])
-        cfg["img_ativa"] = t2.toggle("Geração de Imagens", value=cfg["img_ativa"])
-        cfg["arq_ativo"] = t3.toggle("Leitura de Arquivos", value=cfg["arq_ativo"])
-        cfg["cod_ativo"] = t4.toggle("Execução de Código", value=cfg["cod_ativo"])
+        cfg["arq_ativo"] = t2.toggle("Leitura de Arquivos", value=cfg["arq_ativo"])
+        cfg["cod_ativo"] = t3.toggle("Execução de Código", value=cfg["cod_ativo"])
         ca1, ca2 = st.columns(2)
         cfg["conexoes"]["Google Agenda"] = ca1.toggle("Google Agenda", value=cfg["conexoes"]["Google Agenda"])
         cfg["conexoes"]["Notion"] = ca1.toggle("Notion", value=cfg["conexoes"]["Notion"])
