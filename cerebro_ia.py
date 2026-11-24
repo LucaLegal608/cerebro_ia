@@ -285,7 +285,7 @@ def processar_envio_publico(texto_usuario):
         f"- MEMÓRIA SOBRE O USUÁRIO: {mems_usr or 'Nenhum fato salvo.'}\n"
         f"- ARQUIVO ANEXADO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum.'}\n"
     )
-          f"- ARQUIVO ANEXADO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum.'}\n"
+        f"- ARQUIVO ANEXADO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum.'}\n"
         f"- INTEGRAÇÕES: {', '.join(apps_ativos) if apps_ativos else 'Nenhuma'} | APROVAÇÃO: {cfg['modo_aprovacao']}.\n"
         f"- CRIADOR: {ler_dna_criador()}. MEMÓRIAS GERAIS: {banco_memoria.buscar_todas_notas()}."
     )
