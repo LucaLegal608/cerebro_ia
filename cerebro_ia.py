@@ -284,7 +284,7 @@ def processar_envio_publico(texto_usuario):
         f"- INSTRUÇÕES DO USUÁRIO: {cfg['system_prompt'] or 'Nenhuma regra extra.'}\n"
         f"- MEMÓRIA SOBRE O USUÁRIO: {mems_usr or 'Nenhum fato salvo.'}\n"
         f"- ARQUIVO ANEXADO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum.'}\n"
-    )
+
     with st.sidebar:
     st.markdown("### :material/memory: L.U.C.AI")
     st.caption("Lógica Unificada de Conhecimento e Ação Inteligente")
