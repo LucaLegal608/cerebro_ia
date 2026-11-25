@@ -20,7 +20,7 @@ except ImportError:
     except ImportError:
         TEM_BUSCA = False
 
-st.set_page_config(page_title="L.U.C.AI (v3.6) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="L.U.C.AI (v3.7) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
 banco_memoria.iniciar_banco()
 
 def iniciar_tabelas_v3():
@@ -37,14 +37,14 @@ CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 SENHA_CRIADOR = "947298688"
-VERSAO_IA = "v3.6"
+VERSAO_IA = "v3.7"
 
 def obter_data_hora_atual():
     agora = datetime.now(timezone(timedelta(hours=-3)))
     dias = ("Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo")
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.6**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — pesquisando na web em tempo real, lendo arquivos e com **15 créditos gratuitos ⚡** já liberados. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.7**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — pesquisando na web em tempo real, lendo arquivos e com **15 créditos gratuitos ⚡** já liberados. Como posso ajudar hoje?"
 
 CFG_PADRAO = {
     "system_prompt": "",
@@ -79,6 +79,9 @@ if "memorias_sessao" not in st.session_state:
 if "criador_autenticado" not in st.session_state:
     st.session_state.criador_autenticado = False
 
+if "efeito_estrelas" not in st.session_state:
+    st.session_state.efeito_estrelas = False
+
 if "conversas" not in st.session_state:
     id_ini = str(uuid.uuid4())
     st.session_state.conversas = {id_ini: {"titulo": "Nova conversa", "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]}}
@@ -101,6 +104,7 @@ def criar_nova_conversa():
     st.session_state.conversas[nid] = {"titulo": "Nova conversa", "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]}
     st.session_state.conversa_atual = nid
     st.session_state.modo_tela = "chat"
+    st.session_state.efeito_estrelas = True
 
 def excluir_conversa(id_conv):
     if len(st.session_state.conversas) > 1:
@@ -109,6 +113,153 @@ def excluir_conversa(id_conv):
             st.session_state.conversa_atual = list(st.session_state.conversas.keys())[-1]
     else:
         st.session_state.conversas[id_conv] = {"titulo": "Nova conversa", "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]}
+
+css_estilo = (
+    "<style>"
+    "@import url('https://googleapis.com');"
+    "html, body, .stApp { font-family: 'Plus Jakarta Sans', sans-serif !important; }"
+    ".gemini-header { display: flex; align-items: center; gap: 14px; padding: 0.5rem 0.2rem 0.9rem 0.2rem; margin-bottom: 0.8rem; border-bottom: 1px solid rgba(128, 128, 128, 0.25); }"
+    ".chip-emblem { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #0284C7 0%, #38BDF8 50%, #7C3AED 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0, 229, 255, 0.35); flex-shrink: 0; }"
+    ".gemini-title { font-size: 1.95rem; font-weight: 700; background: linear-gradient(90deg, #0284C7 0%, #00B4D8 50%, #9333EA 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent !important; display: inline-block; margin: 0; line-height: 1.2; }"
+    ".gemini-sigla { font-size: 0.98rem; opacity: 0.8; font-weight: 500; margin-left: 6px; }"
+    ".badge-v3 { background-color: rgba(0, 229, 255, 0.15) !important; color: #00B4D8 !important; border: 1px solid #00B4D8 !important; font-size: 0.74rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; vertical-align: middle; margin-left: 8px; }"
+    ".gemini-subtitle { opacity: 0.8; font-size: 0.92rem; margin-top: 0.2rem; }"
+    "@media (max-width: 768px) {"
+    ".gemini-header { gap: 10px; padding-top: 0.2rem; }"
+    ".chip-emblem { width: 40px; height: 40px; border-radius: 12px; }"
+    ".gemini-title { font-size: 1.45rem; }"
+    ".gemini-sigla { display: block; margin-left: 0; font-size: 0.8rem; }"
+    ".gemini-subtitle { font-size: 0.82rem; }"
+    ".block-container { padding-top: 2.8rem !important; padding-left: 0.8rem !important; padding-right: 0.8rem !important; }"
+    "}"
+    ".stButton > button, [data-testid='stFormSubmitButton'] > button, [data-testid='stDownloadButton'] > button { border-radius: 14px !important; border: 1.5px solid rgba(0, 229, 255, 0.45) !important; font-weight: 600 !important; transition: all 0.25s ease !important; }"
+    ".stButton > button:hover, [data-testid='stFormSubmitButton'] > button:hover, [data-testid='stDownloadButton'] > button:hover { border-color: #00F3FF !important; box-shadow: 0 0 14px rgba(0, 243, 255, 0.55) !important; }"
+    "@keyframes pulsoCianoNeon { 0% { transform: scale(1); box-shadow: 0 0 16px #00E5FF; } 40% { transform: scale(0.94); box-shadow: 0 0 42px #00F3FF, 0 0 20px #FFFFFF; } 80% { transform: scale(1.04); box-shadow: 0 0 30px #00F3FF; } 100% { transform: scale(1); box-shadow: 0 0 18px #00E5FF; } }"
+    "button[kind='primary'], button[data-testid='baseButton-primary'], button[data-testid='stBaseButton-primary'], [data-testid='stSidebar'] button[kind='primary'], [data-testid='stSidebar'] [data-testid='stBaseButton-primary'], [data-testid='stFormSubmitButton'] button[kind='primary'] { background: linear-gradient(90deg, #00B4D8 0%, #00F3FF 100%) !important; background-color: #00E5FF !important; border: 1.5px solid #80F9FF !important; color: #021420 !important; font-weight: 700 !important; box-shadow: 0 0 18px rgba(0, 243, 255, 0.8), 0 0 6px rgba(0, 243, 255, 0.6) !important; }"
+    "button[kind='primary'] *, button[data-testid='baseButton-primary'] *, button[data-testid='stBaseButton-primary'] *, [data-testid='stSidebar'] button[kind='primary'] * { color: #021420 !important; }"
+    "button[kind='primary']:hover, button[data-testid='stBaseButton-primary']:hover { background: linear-gradient(90deg, #00E5FF 0%, #67F7FF 100%) !important; box-shadow: 0 0 28px #00F3FF, 0 0 14px #FFFFFF !important; transform: translateY(-2px) !important; }"
+    "button[kind='primary']:active, button[data-testid='stBaseButton-primary']:active { animation: pulsoCianoNeon 0.45s ease-out !important; }"
+    "@keyframes voarEstrela { 0% { opacity: 1; transform: translateY(0) scale(0.6) rotate(0deg); } 50% { opacity: 1; transform: translateY(-45px) scale(1.3) rotate(180deg); } 100% { opacity: 0; transform: translateY(-95px) scale(0.8) rotate(360deg); } }"
+    ".estrelas-box { position: fixed; top: 18%; left: 50%; transform: translateX(-50%); z-index: 9999; pointer-events: none; font-size: 2rem; display: flex; gap: 18px; }"
+    ".estrela-anim { display: inline-block; text-shadow: 0 0 14px #00F3FF, 0 0 22px #FFFFFF; animation: voarEstrela 1.4s ease-out forwards; }"
+    "[data-testid='stChatMessage'] { border-radius: 18px !important; padding: 0.9rem 1rem !important; margin-bottom: 0.65rem !important; }"
+    "[data-testid='stChatInput'] { border-radius: 22px !important; }"
+    "</style>"
+)
+st.markdown(css_estilo, unsafe_allow_html=True)
+
+if st.session_state.efeito_estrelas:
+    estrelas_html = (
+        '<div class="estrelas-box">'
+        '<span class="estrela-anim" style="animation-delay:0s;">✨</span>'
+        '<span class="estrela-anim" style="animation-delay:0.1s;">⭐</span>'
+        '<span class="estrela-anim" style="animation-delay:0.2s;">💫</span>'
+        '<span class="estrela-anim" style="animation-delay:0.15s;">✨</span>'
+        '<span class="estrela-anim" style="animation-delay:0.25s;">🌟</span>'
+        '</div>'
+    )
+    st.markdown(estrelas_html, unsafe_allow_html=True)
+    st.session_state.efeito_estrelas = False
+
+def pesquisar_na_web(consulta):
+    if not TEM_BUSCA:
+        return ""
+    try:
+        resultados = list(DDGS().text(consulta, region="br-pt", max_results=5))
+        if not resultados:
+            resultados = list(DDGS().news(consulta, region="br-pt", max_results=4))
+        if not resultados:
+            return ""
+        resumo_web = "\n".join([f"- {r.get('title', '')}: {r.get('body', '')}" for r in resultados])
+        return f"\n\n[DADOS ATUALIZADOS DA INTERNET AGORA — USE OBRIGATORIAMENTE PARA RESPONDER]:\n{resumo_web}"
+    except Exception:
+        return ""
+
+def ler_memorias_usuario():
+    return st.session_state.memorias_sessao
+
+def ler_dna_criador():
+    try:
+        with open("perfil_cerebro.txt", "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return "Projeto criado por Luca de Brito Ferreira."
+
+def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
+    regra_idioma = "\n\n[INSTRUÇÃO DE QUALIDADE]: Responda SEMPRE em português do Brasil natural, fluido, inteligente e bem escrito. NUNCA coloque frases entre colchetes [...] no final da resposta e NUNCA invente que pesquisou no Google ou Mercado Livre se não houver dados de pesquisa acima."
+    sistema_completo = f"{instrucao_sistema}{regra_idioma}\n\n[DATA E HORA ATUAL EM BRASÍLIA: {obter_data_hora_atual()}.]"
+    mensagens_formatadas = [{"role": "system", "content": sistema_completo}]
+    janela = st.session_state.cfg["janela_contexto"]
+    for item in historico[-janela:]:
+        mensagens_formatadas.append({"role": item["role"], "content": item["content"]})
+    mensagens_formatadas.append({"role": "user", "content": mensagem})
+
+    preferidos = (
+        "llama-3.3-70b-versatile",
+        "meta-llama/llama-4-maverick-17b-128e-instruct",
+        "meta-llama/llama-4-scout-17b-16e-instruct",
+        "llama-3.1-70b-versatile",
+        "llama3-70b-8192"
+    )
+    disponiveis = []
+    try:
+        for m in client.models.list().data:
+            if not any(x in m.id.lower() for x in ("whisper", "guard", "tts", "vision", "compound", "8b")):
+                disponiveis.append(m.id)
+    except Exception as e:
+        return f"Erro na chave da API: {e}"
+
+    lista_final = [m for m in preferidos if m in disponiveis] + [m for m in disponiveis if m not in preferidos]
+    if not lista_final:
+        lista_final = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+
+    ultimo_erro = ""
+    for modelo in lista_final:
+        try:
+            resposta = client.chat.completions.create(model=modelo, messages=mensagens_formatadas, temperature=temperatura)
+            for escolha in resposta.choices:
+                conteudo = escolha.message.content
+                if conteudo and conteudo.strip():
+                    return conteudo.strip()
+        except Exception as erro:
+            ultimo_erro = str(erro)
+            time.sleep(0.5)
+    return f"Não foi possível responder agora. Detalhe: {ultimo_erro}"
+
+def precisa_pesquisar(texto):
+    t = texto.lower()
+    gatilhos = (
+        "pesquise", "busque", "procure", "notícia", "noticia", "hoje", "ontem",
+        "amanhã", "atual", "preço", "valor", "cotação", "dólar", "clima",
+        "tempo", "previsão", "resultado", "placar", "jogo", "quem ganhou",
+        "lançamento", "2025", "2026", "onde fica", "site oficial", "link"
+    )
+    return any(g in t for g in gatilhos)
+
+def processar_envio_publico(texto_usuario):
+    cfg = st.session_state.cfg
+    vai_buscar_web = cfg["web_ativa"] and precisa_pesquisar(texto_usuario)
+    custo = 2 if (vai_buscar_web or cfg["base_conhecimento"]) else 1
+
+    saldo = obter_creditos()
+    if saldo < custo:
+        st.error(f"Créditos insuficientes! Esta ação custa **{custo} créditos ⚡**, mas você tem **{saldo}**. Os créditos são **100% gratuitos** — vá em **Resgatar Créditos ⚡** no menu **⋮** e peça um código gratuito ao criador Luca Legal!")
+        return
+
+    if st.session_state.msgs_hoje >= cfg["limite_msgs_dia"]:
+        st.warning(f"Limite diário de {cfg['limite_msgs_dia']} mensagens atingido!")
+        return
+
+    for cmd, expansao in cfg["atalhos"].items():
+        if texto_usuario.strip().startswith(cmd):
+            resto = texto_usuario.strip()[len(cmd):].strip()
+            texto_usuario = f"{expansao} {resto}".strip()
+            break
+
+    conv = st.session_state.conversas[st.session_state.conversa_atual]
+    if conv["titulo"] == "Nova conversa" and not cfg["modo_anonimo"]:
+        conv["titulo"] = texto_usuario[:26] + ("..." if len(texto_usuario) > 26 else "")
+    conv["mensagens"].append({"role": "user", "content": texto_usuario})
 
 with st.sidebar:
     st.markdown("### :material/memory: L.U.C.AI")
