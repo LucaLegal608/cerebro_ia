@@ -199,16 +199,19 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
         mensagens_formatadas.append({"role": item["role"], "content": item["content"]})
     mensagens_formatadas.append({"role": "user", "content": mensagem})
 
-    modelos_grandes = (
-        "llama-3.3-70b-versatile",
-        "meta-llama/llama-4-maverick-17b-128e-instruct",
-        "meta-llama/llama-4-scout-17b-16e-instruct",
-        "qwen/qwen3-32b",
-        "llama-3.1-8b-instant"
-    )
+    modelos_vivos = []
+    try:
+        for m in client.models.list().data:
+            mid = m.id.lower()
+            if not any(x in mid for x in ("whisper", "guard", "tts", "vision", "compound", "safeguard", "embed")):
+                modelos_vivos.append(m.id)
+    except Exception as e:
+        return f"Erro ao consultar modelos da Groq: {e}"
 
-    ultimo_erro = ""
-    for modelo in modelos_grandes:
+    modelos_vivos.sort(key=lambda x: ("70b" not in x.lower() and "120b" not in x.lower() and "32b" not in x.lower(), x))
+
+    ultimo_erro = "Nenhum modelo de texto ativo encontrado na conta."
+    for modelo in modelos_vivos:
         try:
             resposta = client.chat.completions.create(
                 model=modelo,
