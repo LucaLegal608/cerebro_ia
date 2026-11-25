@@ -20,7 +20,7 @@ except ImportError:
     except ImportError:
         TEM_BUSCA = False
 
-st.set_page_config(page_title="L.U.C.AI (v3.8) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="L.U.C.AI (v3.9) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
 banco_memoria.iniciar_banco()
 
 def iniciar_tabelas_v3():
@@ -37,14 +37,14 @@ CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 SENHA_CRIADOR = "947298688"
-VERSAO_IA = "v3.8"
+VERSAO_IA = "v3.9"
 
 def obter_data_hora_atual():
     agora = datetime.now(timezone(timedelta(hours=-3)))
     dias = ("Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo")
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.8**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — pesquisando na web em tempo real, lendo arquivos e com **15 créditos gratuitos ⚡** já liberados. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.9**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — pesquisando na web em tempo real, lendo arquivos e com **15 créditos gratuitos ⚡** já liberados. Como posso ajudar hoje?"
 
 CFG_PADRAO = {
     "system_prompt": "",
@@ -186,45 +186,43 @@ def ler_dna_criador():
         return "Projeto criado por Luca de Brito Ferreira."
 
 def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
-    regra_idioma = "\n\n[INSTRUÇÃO DE QUALIDADE]: Responda SEMPRE em português do Brasil natural, fluido, inteligente e bem escrito. NUNCA coloque frases entre colchetes [...] no final da resposta e NUNCA invente que pesquisou no Google ou Mercado Livre se não houver dados de pesquisa acima."
-    sistema_completo = f"{instrucao_sistema}{regra_idioma}\n\n[DATA E HORA ATUAL EM BRASÍLIA: {obter_data_hora_atual()}.]"
+    regra_idioma = "\n\n[INSTRUÇÃO]: Responda SEMPRE em português do Brasil natural, fluido e claro. Nunca coloque frases entre colchetes no final."
+    sistema_completo = f"{instrucao_sistema}{regra_idioma}\n\n[DATA E HORA ATUAL: {obter_data_hora_atual()}]"
     mensagens_formatadas = [{"role": "system", "content": sistema_completo}]
     janela = st.session_state.cfg["janela_contexto"]
     for item in historico[-janela:]:
         mensagens_formatadas.append({"role": item["role"], "content": item["content"]})
     mensagens_formatadas.append({"role": "user", "content": mensagem})
 
-    preferidos = (
-        "llama-3.3-70b-versatile",
-        "meta-llama/llama-4-maverick-17b-128e-instruct",
-        "meta-llama/llama-4-scout-17b-16e-instruct",
-        "llama-3.1-8b-instant",
-        "gemma2-9b-it"
-    )
-    disponiveis = []
+    modelos_teste = []
     try:
         for m in client.models.list().data:
-            if not any(x in m.id.lower() for x in ("whisper", "guard", "tts", "vision", "compound", "prompt-guard")):
-                disponiveis.append(m.id)
+            mid = m.id.lower()
+            if not any(x in mid for x in ("whisper", "guard", "tts", "vision", "compound", "safeguard")):
+                modelos_teste.append(m.id)
     except Exception as e:
-        return f"Erro na chave da API Groq: {e}"
+        return f"Erro ao conectar na Groq (verifique sua GROQ_API_KEY): {e}"
 
-    lista_final = [m for m in preferidos if m in disponiveis] + [m for m in disponiveis if m not in preferidos]
-    if not lista_final:
-        lista_final = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+    modelos_teste.sort(key=lambda x: ("llama-3.3-70b" not in x, "llama-3.1" not in x, x))
 
-    ultimo_erro = ""
-    for modelo in lista_final:
+    ultimo_erro = "Nenhum modelo disponível na conta."
+    for modelo in modelos_teste:
         try:
-            resposta = client.chat.completions.create(model=modelo, messages=mensagens_formatadas, temperature=temperatura)
+            resposta = client.chat.completions.create(
+                model=modelo,
+                messages=mensagens_formatadas,
+                temperature=temperatura,
+                max_tokens=1024
+            )
             for escolha in resposta.choices:
                 conteudo = escolha.message.content
                 if conteudo and conteudo.strip():
                     return conteudo.strip()
         except Exception as erro:
-            ultimo_erro = str(erro)
-            time.sleep(0.3)
-    return f"Não foi possível gerar resposta agora. Motivo técnico: {ultimo_erro}"
+            ultimo_erro = f"({modelo}): {erro}"
+            continue
+
+    return f"Erro na API Groq: {ultimo_erro}"
 
 def precisa_pesquisar(texto):
     t = texto.lower()
@@ -259,8 +257,15 @@ def processar_envio_publico(texto_usuario):
     conv = st.session_state.conversas[st.session_state.conversa_atual]
     if conv["titulo"] == "Nova conversa" and not cfg["modo_anonimo"]:
         conv["titulo"] = texto_usuario[:26] + ("..." if len(texto_usuario) > 26 else "")
+    conv["mensagens"].append({"role": "user", "content": texto_usuario})
+    st.session_state.msgs_hoje += 1
 
-with st.sidebar:
+    mems_usr = "\n".join([f"- {f}" for f in ler_memorias_usuario()])
+    apps_ativos = [k for k, v in cfg["conexoes"].items() if v]
+
+    bloco_regras = (
+
+    with st.sidebar:
     st.markdown("### :material/memory: L.U.C.AI")
     st.caption("Lógica Unificada de Conhecimento e Ação Inteligente")
     st.caption(f":material/schedule: {obter_data_hora_atual()}")
