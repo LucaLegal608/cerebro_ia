@@ -20,7 +20,7 @@ except ImportError:
     except ImportError:
         TEM_BUSCA = False
 
-st.set_page_config(page_title="L.U.C.AI (v3.5) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="L.U.C.AI (v3.6) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
 banco_memoria.iniciar_banco()
 
 def iniciar_tabelas_v3():
@@ -37,14 +37,14 @@ CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 SENHA_CRIADOR = "947298688"
-VERSAO_IA = "v3.5"
+VERSAO_IA = "v3.6"
 
 def obter_data_hora_atual():
     agora = datetime.now(timezone(timedelta(hours=-3)))
     dias = ("Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo")
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.5**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — pesquisando na web em tempo real, lendo arquivos e com **15 créditos gratuitos ⚡** já liberados. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.6**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — pesquisando na web em tempo real, lendo arquivos e com **15 créditos gratuitos ⚡** já liberados. Como posso ajudar hoje?"
 
 CFG_PADRAO = {
     "system_prompt": "",
@@ -76,6 +76,9 @@ if "creditos_sessao" not in st.session_state:
 if "memorias_sessao" not in st.session_state:
     st.session_state.memorias_sessao = []
 
+if "criador_autenticado" not in st.session_state:
+    st.session_state.criador_autenticado = False
+
 if "conversas" not in st.session_state:
     id_ini = str(uuid.uuid4())
     st.session_state.conversas = {id_ini: {"titulo": "Nova conversa", "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]}}
@@ -106,157 +109,6 @@ def excluir_conversa(id_conv):
             st.session_state.conversa_atual = list(st.session_state.conversas.keys())[-1]
     else:
         st.session_state.conversas[id_conv] = {"titulo": "Nova conversa", "mensagens": [{"role": "assistant", "content": MENSAGEM_INICIAL}]}
-
-css_estilo = (
-    "<style>"
-    "@import url('https://googleapis.com');"
-    "html, body, .stApp { font-family: 'Plus Jakarta Sans', sans-serif !important; }"
-    ".gemini-header { display: flex; align-items: center; gap: 14px; padding: 0.5rem 0.2rem 0.9rem 0.2rem; margin-bottom: 0.8rem; border-bottom: 1px solid rgba(128, 128, 128, 0.25); }"
-    ".chip-emblem { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #0284C7 0%, #38BDF8 50%, #7C3AED 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0, 229, 255, 0.35); flex-shrink: 0; }"
-    ".gemini-title { font-size: 1.95rem; font-weight: 700; background: linear-gradient(90deg, #0284C7 0%, #00B4D8 50%, #9333EA 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent !important; display: inline-block; margin: 0; line-height: 1.2; }"
-    ".gemini-sigla { font-size: 0.98rem; opacity: 0.8; font-weight: 500; margin-left: 6px; }"
-    ".badge-v3 { background-color: rgba(0, 229, 255, 0.15) !important; color: #00B4D8 !important; border: 1px solid #00B4D8 !important; font-size: 0.74rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; vertical-align: middle; margin-left: 8px; }"
-    ".gemini-subtitle { opacity: 0.8; font-size: 0.92rem; margin-top: 0.2rem; }"
-    "@media (max-width: 768px) {"
-    ".gemini-header { gap: 10px; padding-top: 0.2rem; }"
-    ".chip-emblem { width: 40px; height: 40px; border-radius: 12px; }"
-    ".gemini-title { font-size: 1.45rem; }"
-    ".gemini-sigla { display: block; margin-left: 0; font-size: 0.8rem; }"
-    ".gemini-subtitle { font-size: 0.82rem; }"
-    ".block-container { padding-top: 2.8rem !important; padding-left: 0.8rem !important; padding-right: 0.8rem !important; }"
-    "}"
-    ".stButton > button, [data-testid='stFormSubmitButton'] > button, [data-testid='stDownloadButton'] > button { border-radius: 14px !important; border: 1.5px solid rgba(128, 128, 128, 0.35) !important; font-weight: 600 !important; transition: all 0.2s ease !important; }"
-    ".stButton > button:hover, [data-testid='stFormSubmitButton'] > button:hover, [data-testid='stDownloadButton'] > button:hover { border-color: #00B4D8 !important; }"
-    "@keyframes pulsoCiano { 0% { transform: scale(1); box-shadow: 0 0 12px rgba(0, 229, 255, 0.75); } 45% { transform: scale(0.93); box-shadow: 0 0 36px rgba(0, 243, 255, 1), 0 0 14px #FFFFFF; } 80% { transform: scale(1.03); box-shadow: 0 0 24px rgba(0, 243, 255, 0.95); } 100% { transform: scale(1); box-shadow: 0 0 16px rgba(0, 229, 255, 0.8); } }"
-    "button[kind='primary'], [data-testid='stBaseButton-primary'] { background: linear-gradient(90deg, #0096C7 0%, #00E5FF 100%) !important; border: 1.5px solid #00F3FF !important; color: #031525 !important; font-weight: 700 !important; box-shadow: 0 0 15px rgba(0, 229, 255, 0.65) !important; transition: all 0.25s ease !important; }"
-    "button[kind='primary'] *, [data-testid='stBaseButton-primary'] * { color: #031525 !important; }"
-    "button[kind='primary']:hover, [data-testid='stBaseButton-primary']:hover { box-shadow: 0 0 26px rgba(0, 243, 255, 0.95), 0 0 10px rgba(0, 243, 255, 0.8) !important; transform: translateY(-2px) !important; }"
-    "button[kind='primary']:active, [data-testid='stBaseButton-primary']:active { animation: pulsoCiano 0.4s ease-out !important; }"
-    "[data-testid='stChatMessage'] { border-radius: 18px !important; padding: 0.9rem 1rem !important; margin-bottom: 0.65rem !important; }"
-    "[data-testid='stChatInput'] { border-radius: 22px !important; }"
-    "</style>"
-)
-st.markdown(css_estilo, unsafe_allow_html=True)
-
-def pesquisar_na_web(consulta):
-    if not TEM_BUSCA:
-        return ""
-    try:
-        resultados = list(DDGS().text(consulta, region="br-pt", max_results=5))
-        if not resultados:
-            resultados = list(DDGS().news(consulta, region="br-pt", max_results=4))
-        if not resultados:
-            return ""
-        resumo_web = "\n".join([f"- {r.get('title', '')}: {r.get('body', '')}" for r in resultados])
-        return f"\n\n[DADOS ATUALIZADOS DA INTERNET AGORA — USE OBRIGATORIAMENTE PARA RESPONDER]:\n{resumo_web}"
-    except Exception:
-        return ""
-
-def ler_memorias_usuario():
-    return st.session_state.memorias_sessao
-
-def ler_dna_criador():
-    try:
-        with open("perfil_cerebro.txt", "r", encoding="utf-8") as f:
-            return f.read()
-    except FileNotFoundError:
-        return "Projeto criado por Luca de Brito Ferreira."
-
-def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
-    regra_idioma = "\n\n[INSTRUÇÃO DE QUALIDADE]: Responda SEMPRE em português do Brasil natural, fluido, inteligente e bem escrito. NUNCA coloque frases entre colchetes [...] no final da resposta e NUNCA invente que pesquisou no Google ou Mercado Livre se não houver dados de pesquisa acima."
-    sistema_completo = f"{instrucao_sistema}{regra_idioma}\n\n[DATA E HORA ATUAL EM BRASÍLIA: {obter_data_hora_atual()}.]"
-    mensagens_formatadas = [{"role": "system", "content": sistema_completo}]
-    janela = st.session_state.cfg["janela_contexto"]
-    for item in historico[-janela:]:
-        mensagens_formatadas.append({"role": item["role"], "content": item["content"]})
-    mensagens_formatadas.append({"role": "user", "content": mensagem})
-
-    preferidos = (
-        "llama-3.3-70b-versatile",
-        "meta-llama/llama-4-maverick-17b-128e-instruct",
-        "meta-llama/llama-4-scout-17b-16e-instruct",
-        "llama-3.1-70b-versatile",
-        "llama3-70b-8192"
-    )
-    disponiveis = []
-    try:
-        for m in client.models.list().data:
-            if not any(x in m.id.lower() for x in ("whisper", "guard", "tts", "vision", "compound", "8b")):
-                disponiveis.append(m.id)
-    except Exception as e:
-        return f"Erro na chave da API: {e}"
-
-    lista_final = [m for m in preferidos if m in disponiveis] + [m for m in disponiveis if m not in preferidos]
-    if not lista_final:
-        lista_final = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
-
-    ultimo_erro = ""
-    for modelo in lista_final:
-        try:
-            resposta = client.chat.completions.create(model=modelo, messages=mensagens_formatadas, temperature=temperatura)
-            for escolha in resposta.choices:
-                conteudo = escolha.message.content
-                if conteudo and conteudo.strip():
-                    return conteudo.strip()
-        except Exception as erro:
-            ultimo_erro = str(erro)
-            time.sleep(0.5)
-    return f"Não foi possível responder agora. Detalhe: {ultimo_erro}"
-
-def precisa_pesquisar(texto):
-    t = texto.lower()
-    gatilhos = (
-        "pesquise", "busque", "procure", "notícia", "noticia", "hoje", "ontem",
-        "amanhã", "atual", "preço", "valor", "cotação", "dólar", "clima",
-        "tempo", "previsão", "resultado", "placar", "jogo", "quem ganhou",
-        "lançamento", "2025", "2026", "onde fica", "site oficial", "link"
-    )
-    return any(g in t for g in gatilhos)
-
-def processar_envio_publico(texto_usuario):
-    cfg = st.session_state.cfg
-    vai_buscar_web = cfg["web_ativa"] and precisa_pesquisar(texto_usuario)
-    custo = 2 if (vai_buscar_web or cfg["base_conhecimento"]) else 1
-
-    saldo = obter_creditos()
-    if saldo < custo:
-        st.error(f"Créditos insuficientes! Esta ação custa **{custo} créditos ⚡**, mas você tem **{saldo}**. Os créditos são **100% gratuitos** — vá em **Resgatar Créditos ⚡** no menu **⋮** e peça um código gratuito ao criador Luca Legal!")
-        return
-
-    if st.session_state.msgs_hoje >= cfg["limite_msgs_dia"]:
-        st.warning(f"Limite diário de {cfg['limite_msgs_dia']} mensagens atingido!")
-        return
-
-    for cmd, expansao in cfg["atalhos"].items():
-        if texto_usuario.strip().startswith(cmd):
-            resto = texto_usuario.strip()[len(cmd):].strip()
-            texto_usuario = f"{expansao} {resto}".strip()
-            break
-
-    conv = st.session_state.conversas[st.session_state.conversa_atual]
-    if conv["titulo"] == "Nova conversa" and not cfg["modo_anonimo"]:
-        conv["titulo"] = texto_usuario[:26] + ("..." if len(texto_usuario) > 26 else "")
-    conv["mensagens"].append({"role": "user", "content": texto_usuario})
-    st.session_state.msgs_hoje += 1
-
-    mems_usr = "\n".join([f"- {f}" for f in ler_memorias_usuario()])
-    apps_ativos = [k for k, v in cfg["conexoes"].items() if v]
-
-    bloco_regras = (
-        f"Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa em português natural e fluente.\n"
-        "- REGRA SOBRE CRÉDITOS: Todos os créditos da L.U.C.AI são 100% GRATUITOS! Todo usuário já começa com 15 créditos grátis sem precisar criar conta e, se precisar de mais, basta pedir um código de recarga gratuito para o criador Luca Legal e resgatar na aba 'Resgatar Créditos ⚡' no menu '⋮'.\n"
-        f"- IDIOMA: {cfg['idioma']} | TOM DE VOZ: {cfg['tom_voz']} | TAMANHO: {cfg['tamanho']}.\n"
-        f"- INSTRUÇÕES DO USUÁRIO: {cfg['system_prompt'] or 'Nenhuma regra extra.'}\n"
-        f"- MEMÓRIA DA SESSÃO: {mems_usr or 'Nenhum fato salvo.'}\n"
-        f"- ARQUIVO ANEXADO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum.'}\n"
-        f"- INTEGRAÇÕES: {', '.join(apps_ativos) if apps_ativos else 'Nenhuma'} | APROVAÇÃO: {cfg['modo_aprovacao']}.\n"
-        f"- CRIADOR: {ler_dna_criador()}. MEMÓRIAS GERAIS: {banco_memoria.buscar_todas_notas()}."
-    )
-
-    dados_web = pesquisar_na_web(texto_usuario) if vai_buscar_web else ""
-    resp = gerar_resposta(texto_usuario, conv["mensagens"][:-1], bloco_regras + dados_web, cfg["temperatura"])
-    alterar_creditos(-custo)
-    conv["mensagens"].append({"role": "assistant", "content": resp})
 
 with st.sidebar:
     st.markdown("### :material/memory: L.U.C.AI")
@@ -386,19 +238,19 @@ elif st.session_state.modo_tela == "feedback":
 
 elif st.session_state.modo_tela == "ver_feedbacks":
     st.subheader("Feedbacks Recebidos (Acesso Restrito)")
-    senha_fb = st.text_input("Código de acesso:", type="password", key="pwd_fb")
-    if senha_fb == SENHA_CRIADOR:
+    if telas_extras.verificar_acesso_criador(SENHA_CRIADOR, "pwd_fb"):
         conn = sqlite3.connect("memoria.db")
         lista_fb = conn.execute("SELECT id, autor, mensagem, data FROM feedbacks ORDER BY id DESC").fetchall()
         conn.close()
+        if not lista_fb:
+            st.info("Nenhum feedback recebido ainda.")
         for fid, fautor, fmsg, fdata in lista_fb:
             st.markdown(f"**#{fid} • {fautor}** *({fdata})*")
             st.info(fmsg)
 
 elif st.session_state.modo_tela == "estudio":
     st.subheader("Estúdio do Criador (Acesso Restrito)")
-    senha_est = st.text_input("Código de acesso:", type="password", key="pwd_est")
-    if senha_est == SENHA_CRIADOR:
+    if telas_extras.verificar_acesso_criador(SENHA_CRIADOR, "pwd_est"):
         st.success("Acesso autorizado, Luca!")
         if "hist_copiloto" not in st.session_state:
             st.session_state.hist_copiloto = []
@@ -419,8 +271,7 @@ elif st.session_state.modo_tela == "estudio":
 
 elif st.session_state.modo_tela == "memoria":
     st.subheader("Banco de Dados (Acesso Restrito)")
-    senha_mem = st.text_input("Código de acesso:", type="password", key="pwd_mem")
-    if senha_mem == SENHA_CRIADOR:
+    if telas_extras.verificar_acesso_criador(SENHA_CRIADOR, "pwd_mem"):
         cat = st.selectbox("Categoria", ("Novidade", "Produto/Link", "Informação Geral", "Regra de Resposta"))
         nota = st.text_area("O que a L.U.C.AI deve memorizar?")
         if st.button("Salvar Manualmente", icon=":material/save:"):
