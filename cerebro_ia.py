@@ -20,7 +20,7 @@ except ImportError:
     except ImportError:
         TEM_BUSCA = False
 
-st.set_page_config(page_title="L.U.C.AI (v3.7) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="L.U.C.AI (v3.8) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
 banco_memoria.iniciar_banco()
 
 def iniciar_tabelas_v3():
@@ -37,14 +37,14 @@ CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 SENHA_CRIADOR = "947298688"
-VERSAO_IA = "v3.7"
+VERSAO_IA = "v3.8"
 
 def obter_data_hora_atual():
     agora = datetime.now(timezone(timedelta(hours=-3)))
     dias = ("Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo")
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.7**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — pesquisando na web em tempo real, lendo arquivos e com **15 créditos gratuitos ⚡** já liberados. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.8**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — pesquisando na web em tempo real, lendo arquivos e com **15 créditos gratuitos ⚡** já liberados. Como posso ajudar hoje?"
 
 CFG_PADRAO = {
     "system_prompt": "",
@@ -198,16 +198,16 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
         "llama-3.3-70b-versatile",
         "meta-llama/llama-4-maverick-17b-128e-instruct",
         "meta-llama/llama-4-scout-17b-16e-instruct",
-        "llama-3.1-70b-versatile",
-        "llama3-70b-8192"
+        "llama-3.1-8b-instant",
+        "gemma2-9b-it"
     )
     disponiveis = []
     try:
         for m in client.models.list().data:
-            if not any(x in m.id.lower() for x in ("whisper", "guard", "tts", "vision", "compound", "8b")):
+            if not any(x in m.id.lower() for x in ("whisper", "guard", "tts", "vision", "compound", "prompt-guard")):
                 disponiveis.append(m.id)
     except Exception as e:
-        return f"Erro na chave da API: {e}"
+        return f"Erro na chave da API Groq: {e}"
 
     lista_final = [m for m in preferidos if m in disponiveis] + [m for m in disponiveis if m not in preferidos]
     if not lista_final:
@@ -223,8 +223,8 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
                     return conteudo.strip()
         except Exception as erro:
             ultimo_erro = str(erro)
-            time.sleep(0.5)
-    return f"Não foi possível responder agora. Detalhe: {ultimo_erro}"
+            time.sleep(0.3)
+    return f"Não foi possível gerar resposta agora. Motivo técnico: {ultimo_erro}"
 
 def precisa_pesquisar(texto):
     t = texto.lower()
@@ -259,7 +259,6 @@ def processar_envio_publico(texto_usuario):
     conv = st.session_state.conversas[st.session_state.conversa_atual]
     if conv["titulo"] == "Nova conversa" and not cfg["modo_anonimo"]:
         conv["titulo"] = texto_usuario[:26] + ("..." if len(texto_usuario) > 26 else "")
-    conv["mensagens"].append({"role": "user", "content": texto_usuario})
 
 with st.sidebar:
     st.markdown("### :material/memory: L.U.C.AI")
@@ -361,7 +360,8 @@ if st.session_state.modo_tela == "chat":
             st.markdown(texto_msg if texto_msg else "_(Resposta vazia recebida. Tente perguntar novamente.)_")
 
     if prompt_pub := st.chat_input("Pergunte qualquer coisa à L.U.C.AI..."):
-        processar_envio_publico(prompt_pub)
+        with st.spinner("Pensando..."):
+            processar_envio_publico(prompt_pub)
         st.rerun()
 
 elif st.session_state.modo_tela == "creditos":
