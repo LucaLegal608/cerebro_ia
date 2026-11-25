@@ -9,6 +9,18 @@ try:
 except ImportError:
     TEM_PDF = False
 
+def verificar_acesso_criador(senha_criador, chave_widget):
+    if st.session_state.get("criador_autenticado", False):
+        return True
+    s_digitada = st.text_input("Código de acesso do criador:", type="password", key=chave_widget)
+    if st.button("Desbloquear Painel", icon=":material/lock_open:", key=f"btn_{chave_widget}", type="primary"):
+        if s_digitada.strip() == str(senha_criador).strip():
+            st.session_state.criador_autenticado = True
+            st.rerun()
+        else:
+            st.error("Código de acesso incorreto.")
+    return False
+
 def exibir_tela_creditos(obter_creditos, alterar_creditos, senha_criador):
     st.subheader("Central de Créditos 100% Gratuitos — L.U.C.AI ⚡")
     st.metric("Seu Saldo Atual", f"{obter_creditos()} créditos grátis ⚡", help="Todos os créditos da L.U.C.AI são totalmente gratuitos!")
@@ -40,9 +52,8 @@ def exibir_tela_creditos(obter_creditos, alterar_creditos, senha_criador):
                         st.rerun()
 
     st.divider()
-    with st.expander("Painel do Criador — Gerar Códigos Gratuitos (Acesso Restrito)"):
-        s_cred = st.text_input("Código de acesso do criador:", type="password", key="pwd_cred")
-        if s_cred == senha_criador:
+    with st.expander("Painel do Criador — Gerar Códigos Gratuitos (Acesso Restrito)", expanded=st.session_state.get("criador_autenticado", False)):
+        if verificar_acesso_criador(senha_criador, "pwd_cred"):
             col_g1, col_g2 = st.columns(2)
             opcoes_pacotes = (50, 100, 300, 500, 1000)
             pacote_gerar = col_g1.selectbox("Quantidade de créditos grátis:", opcoes_pacotes)
@@ -56,7 +67,7 @@ def exibir_tela_creditos(obter_creditos, alterar_creditos, senha_criador):
                 st.code(novo_cod, language="text")
 
 def exibir_tela_configuracoes(ler_memorias_usuario, criar_nova_conversa):
-    st.subheader("Central de Configurações — L.U.C.AI v3.5")
+    st.subheader("Central de Configurações — L.U.C.AI v3.6")
     cfg = st.session_state.cfg
     tabs_nomes = ("1. Personalidade", "2. Memória & Arquivos", "3. Ferramentas & Apps", "4. Atalhos Rápidos", "5. Privacidade & Segurança")
     aba1, aba2, aba3, aba4, aba5 = st.tabs(tabs_nomes)
