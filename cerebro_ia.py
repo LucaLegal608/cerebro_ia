@@ -20,7 +20,7 @@ except ImportError:
     except ImportError:
         TEM_BUSCA = False
 
-st.set_page_config(page_title="L.U.C.AI (v3.9) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="L.U.C.AI (v4.0) — Lógica Unificada de Conhecimento e Ação Inteligente", page_icon=":material/memory:", layout="wide", initial_sidebar_state="auto")
 banco_memoria.iniciar_banco()
 
 def iniciar_tabelas_v3():
@@ -37,19 +37,19 @@ CHAVE_API = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=CHAVE_API)
 
 SENHA_CRIADOR = "947298688"
-VERSAO_IA = "v3.9"
+VERSAO_IA = "v4.0"
 
 def obter_data_hora_atual():
     agora = datetime.now(timezone(timedelta(hours=-3)))
     dias = ("Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo")
     return agora.strftime(f"%d/%m/%Y às %H:%M ({dias[agora.weekday()]})")
 
-MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v3.9**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — pesquisando na web em tempo real, lendo arquivos e com **15 créditos gratuitos ⚡** já liberados. Como posso ajudar hoje?"
+MENSAGEM_INICIAL = "Olá! Eu sou a **L.U.C.AI** (*Lógica Unificada de Conhecimento e Ação Inteligente* — **v4.0**). Estou pronta para ajudar você com **qualquer coisa do dia a dia** — pesquisando na web em tempo real, lendo arquivos e com **15 créditos gratuitos ⚡** já liberados. Como posso ajudar hoje?"
 
 CFG_PADRAO = {
     "system_prompt": "",
     "tom_voz": "Casual e Amigável",
-    "temperatura": 0.7,
+    "temperatura": 0.6,
     "tamanho": "Equilibrado",
     "idioma": "Português (Brasil)",
     "janela_contexto": 10,
@@ -186,7 +186,12 @@ def ler_dna_criador():
         return "Projeto criado por Luca de Brito Ferreira."
 
 def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
-    regra_idioma = "\n\n[INSTRUÇÃO]: Responda SEMPRE em português do Brasil natural, fluido e claro. Nunca coloque frases entre colchetes no final."
+    regra_idioma = (
+        "\n\n[REGRAS DE COMPORTAMENTO]:\n"
+        "1. Responda SEMPRE em português do Brasil natural, direto e inteligente.\n"
+        "2. Se o usuário disser apenas 'Olá', 'Oi', 'Tudo bem?' ou uma saudação curta, responda de forma curta, simpática e natural (máximo 2 frases), perguntando como pode ajudar.\n"
+        "3. NUNCA repita parágrafos, NUNCA coloque títulos entre colchetes [Título: ...] e NUNCA invente textos longos sem o usuário pedir."
+    )
     sistema_completo = f"{instrucao_sistema}{regra_idioma}\n\n[DATA E HORA ATUAL: {obter_data_hora_atual()}]"
     mensagens_formatadas = [{"role": "system", "content": sistema_completo}]
     janela = st.session_state.cfg["janela_contexto"]
@@ -194,25 +199,24 @@ def gerar_resposta(mensagem, historico, instrucao_sistema, temperatura):
         mensagens_formatadas.append({"role": item["role"], "content": item["content"]})
     mensagens_formatadas.append({"role": "user", "content": mensagem})
 
-    modelos_teste = []
-    try:
-        for m in client.models.list().data:
-            mid = m.id.lower()
-            if not any(x in mid for x in ("whisper", "guard", "tts", "vision", "compound", "safeguard")):
-                modelos_teste.append(m.id)
-    except Exception as e:
-        return f"Erro ao conectar na Groq (verifique sua GROQ_API_KEY): {e}"
+    modelos_grandes = (
+        "llama-3.3-70b-versatile",
+        "meta-llama/llama-4-maverick-17b-128e-instruct",
+        "meta-llama/llama-4-scout-17b-16e-instruct",
+        "qwen/qwen3-32b",
+        "llama-3.1-8b-instant"
+    )
 
-    modelos_teste.sort(key=lambda x: ("llama-3.3-70b" not in x, "llama-3.1" not in x, x))
-
-    ultimo_erro = "Nenhum modelo disponível na conta."
-    for modelo in modelos_teste:
+    ultimo_erro = ""
+    for modelo in modelos_grandes:
         try:
             resposta = client.chat.completions.create(
                 model=modelo,
                 messages=mensagens_formatadas,
                 temperature=temperatura,
-                max_tokens=1024
+                frequency_penalty=0.6,
+                presence_penalty=0.4,
+                max_tokens=900
             )
             for escolha in resposta.choices:
                 conteudo = escolha.message.content
@@ -262,22 +266,6 @@ def processar_envio_publico(texto_usuario):
 
     mems_usr = "\n".join([f"- {f}" for f in ler_memorias_usuario()])
     apps_ativos = [k for k, v in cfg["conexoes"].items() if v]
-
-    bloco_regras = (
-        f"Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa em português natural e fluente.\n"
-        "- REGRA SOBRE CRÉDITOS: Todos os créditos da L.U.C.AI são 100% GRATUITOS! Todo usuário já começa com 15 créditos grátis sem precisar criar conta e, se precisar de mais, basta pedir um código de recarga gratuito para o criador Luca Legal e resgatar na aba 'Resgatar Créditos ⚡' no menu '⋮'.\n"
-        f"- IDIOMA: {cfg['idioma']} | TOM DE VOZ: {cfg['tom_voz']} | TAMANHO: {cfg['tamanho']}.\n"
-        f"- INSTRUÇÕES DO USUÁRIO: {cfg['system_prompt'] or 'Nenhuma regra extra.'}\n"
-        f"- MEMÓRIA DA SESSÃO: {mems_usr or 'Nenhum fato salvo.'}\n"
-        f"- ARQUIVO ANEXADO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum.'}\n"
-        f"- INTEGRAÇÕES: {', '.join(apps_ativos) if apps_ativos else 'Nenhuma'} | APROVAÇÃO: {cfg['modo_aprovacao']}.\n"
-        f"- CRIADOR: {ler_dna_criador()}. MEMÓRIAS GERAIS: {banco_memoria.buscar_todas_notas()}."
-    )
-
-    dados_web = pesquisar_na_web(texto_usuario) if vai_buscar_web else ""
-    resp = gerar_resposta(texto_usuario, conv["mensagens"][:-1], bloco_regras + dados_web, cfg["temperatura"])
-    alterar_creditos(-custo)
-    conv["mensagens"].append({"role": "assistant", "content": resp})
 
 with st.sidebar:
     st.markdown("### :material/memory: L.U.C.AI")
