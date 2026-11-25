@@ -267,6 +267,22 @@ def processar_envio_publico(texto_usuario):
     mems_usr = "\n".join([f"- {f}" for f in ler_memorias_usuario()])
     apps_ativos = [k for k, v in cfg["conexoes"].items() if v]
 
+    bloco_regras = (
+        f"Você é a 'L.U.C.AI' (Lógica Unificada de Conhecimento e Ação Inteligente), versão {VERSAO_IA}, criada por Luca de Brito Ferreira. Você conversa em português natural e fluente.\n"
+        "- REGRA SOBRE CRÉDITOS: Todos os créditos da L.U.C.AI são 100% GRATUITOS! Todo usuário já começa com 15 créditos grátis sem precisar criar conta e, se precisar de mais, basta pedir um código de recarga gratuito para o criador Luca Legal e resgatar na aba 'Resgatar Créditos ⚡' no menu '⋮'.\n"
+        f"- IDIOMA: {cfg['idioma']} | TOM DE VOZ: {cfg['tom_voz']} | TAMANHO: {cfg['tamanho']}.\n"
+        f"- INSTRUÇÕES DO USUÁRIO: {cfg['system_prompt'] or 'Nenhuma regra extra.'}\n"
+        f"- MEMÓRIA DA SESSÃO: {mems_usr or 'Nenhum fato salvo.'}\n"
+        f"- ARQUIVO ANEXADO: {cfg['base_conhecimento'][:4000] if (cfg['base_conhecimento'] and cfg['arq_ativo']) else 'Nenhum.'}\n"
+        f"- INTEGRAÇÕES: {', '.join(apps_ativos) if apps_ativos else 'Nenhuma'} | APROVAÇÃO: {cfg['modo_aprovacao']}.\n"
+        f"- CRIADOR: {ler_dna_criador()}. MEMÓRIAS GERAIS: {banco_memoria.buscar_todas_notas()}."
+    )
+
+    dados_web = pesquisar_na_web(texto_usuario) if vai_buscar_web else ""
+    resp = gerar_resposta(texto_usuario, conv["mensagens"][:-1], bloco_regras + dados_web, cfg["temperatura"])
+    alterar_creditos(-custo)
+    conv["mensagens"].append({"role": "assistant", "content": resp})
+
 with st.sidebar:
     st.markdown("### :material/memory: L.U.C.AI")
     st.caption("Lógica Unificada de Conhecimento e Ação Inteligente")
